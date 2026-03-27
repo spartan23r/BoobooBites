@@ -14,8 +14,8 @@ struct Card: Identifiable, Hashable {
 }
 
 let paywallCards: [Card] = [
+	.init(image: "onboardingPage4Image"),
 	.init(image: "onboardingPage1Image"),
 	.init(image: "onboardingPage2Image"),
-	.init(image: "onboardingPage3Image"),
-	.init(image: "onboardingPage4Image"),
+	.init(image: "onboardingPage3Image")
 ]

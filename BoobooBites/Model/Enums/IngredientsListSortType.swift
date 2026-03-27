@@ -7,12 +7,18 @@
 
 import SwiftUI
 
-struct IngredientsListSortType: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-    }
-}
-
-#Preview {
-    IngredientsListSortType()
+enum IngredientsListSortType: String, CaseIterable, Codable {
+	case name, color/*, defaultUnit*/
+	
+	var description: String {
+		switch self {
+		case .name:
+			"Sort by Name"
+		case .color:
+			"Sort by Color"
+//		case .defaultUnit:
+//			"Sort by Default Unit"
+		}
+	}
+	
 }

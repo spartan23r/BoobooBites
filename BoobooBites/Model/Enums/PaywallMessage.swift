@@ -1,5 +1,5 @@
 //
-//  GetPlusPaywallInformation.swift
+//  PaywallMessage.swift
 //  BoobooBites
 //
 //  Created by Ryan Rook on 26/03/2026.
@@ -12,9 +12,9 @@ enum PaywallMessage {
 	
 	var title: String {
 		switch self {
-		case .ingredients: "Ingredient limit"
-		case .recipes: "Recipe limit"
-		case .mealplans: "Meal Plan limit"
+		case .ingredients: "Ingredients limit reached"
+		case .recipes: "Recipes limit reached"
+		case .mealplans: "Meal Plans limit reached"
 		}
 	}
 	
@@ -23,6 +23,22 @@ enum PaywallMessage {
 		case .ingredients: "You can save up to 12 ingredients for free. Upgrade to keep your full pantry in one place."
 		case .recipes: "You can create up to 3 recipes for free. Upgrade to build your personal cookbook without limits."
 		case .mealplans: "You can create up to 14 meal plans for free. Upgrade to plan your meals without limits or stress."
+		}
+	}
+	
+	var paywallDescription: String {
+		switch self {
+		case .ingredients: "Create and keep unlimited recipes"
+		case .recipes: "Plan meals without limits or stress"
+		case .mealplans: "Save all your ingredients in one place"
+		}
+	}
+	
+	var paywallImage: String {
+		switch self {
+		case .ingredients: "carrot"
+		case .recipes: "fork.knife"
+		case .mealplans: "calendar"
 		}
 	}
 }

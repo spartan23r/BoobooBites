@@ -21,8 +21,8 @@ struct RecipeCardView: View {
 	// MARK: - body
     var body: some View {
 		switch cardStyle {
-		case .regular: regularCardView()
-		case .search: searchCardView()
+		case .regular: regularCardView
+		case .search: searchCardView
 		}
     }
 }
@@ -35,7 +35,7 @@ struct RecipeCardView: View {
 extension RecipeCardView {
 	
 	@ViewBuilder
-	private func searchCardView() -> some View {
+	private var searchCardView: some View {
 		NavigationLink {
 			
 			RecipesItem(recipe: recipe)
@@ -48,7 +48,7 @@ extension RecipeCardView {
 	}
 	
 	@ViewBuilder
-	private func regularCardView() -> some View {
+	private var regularCardView: some View {
 		Section {
 			NavigationLink {
 				
@@ -56,60 +56,21 @@ extension RecipeCardView {
 				
 			} label: {
 				VStack(alignment: .leading, spacing: 9) {
-					
-					VStack(alignment: .leading, spacing: 6) {
-						
-						Text(recipe.name)
-							.font(.subheadline)
-							.bold()
-						
-						Text("\(recipe.ingredients.count, format: .number) \(recipe.ingredients.count != 1 ? "Ingredients" : "Ingredient")")
-							.font(.caption)
-							.foregroundStyle(.secondary)
-						
-					}
-					
-					HStack {
-						
-						HStack(spacing: 3) {
-							Image(systemName: "clock")
-								.symbolVariant(.fill)
-								.font(.caption2)
-							Text("\(recipe.prepTime, format: .number) min")
-								.font(.caption)
-						}
-						.foregroundStyle(.sonicBlue.gradient)
-						.padding(.vertical, 3)
-						.padding(.horizontal, 6)
-						.glassEffectStyle(color: .sonicBlue.opacity(0.2))
-						
-						HStack(spacing: 3) {
-							Image(systemName: "clock")
-								.symbolVariant(.fill)
-								.font(.caption2)
-							Text("\(recipe.cookTime, format: .number) min")
-								.font(.caption)
-						}
-						.foregroundStyle(.tailsOrange.gradient)
-						.padding(.vertical, 3)
-						.padding(.horizontal, 6)
-						.glassEffectStyle(color: .tailsOrange.opacity(0.2))
-						
-						HStack(spacing: 3) {
-							Image(systemName: "person")
-								.symbolVariant(.fill)
-								.font(.caption2)
-							Text("\(recipe.servings, format: .number)")
-								.font(.caption)
-						}
-						.foregroundStyle(.sonicGreen.gradient)
-						.padding(.vertical, 3)
-						.padding(.horizontal, 6)
-						.glassEffectStyle(color: .sonicGreen.opacity(0.2))
-						
-					}
-					
+					RecipeCardDescriptionView(recipe: recipe)
+					RecipeCardTagsView(recipe: recipe)
 				}
+			}
+			.swipeActions(allowsFullSwipe: true) {
+				Button {
+					withAnimation {
+						recipe.isFavorite.toggle()
+					}
+				} label: {
+					Label(
+						recipe.isFavorite ? "Unfavorite" : "Favorite",
+						systemImage: "heart"
+					).symbolVariant(recipe.isFavorite ? .slash : .fill)
+				}.tint(.sonicPink)
 			}
 		}
 		.listSectionSpacing(.compact)

@@ -6,13 +6,37 @@
 //
 
 import SwiftUI
+import Combine
 
-struct TextFieldLimiterModifier: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-    }
+private protocol TextFieldLimiter {
+	
+	func limitText(_ text: Binding<String>, limit: Int)
 }
 
-#Preview {
-    TextFieldLimiterModifier()
+private extension TextFieldLimiter {
+	
+	func limitText(_ text: Binding<String>, limit: Int) {
+		if text.wrappedValue.count > limit {
+			text.wrappedValue = String(text.wrappedValue.prefix(limit))
+		}
+	}
+}
+
+private struct TextFieldLimiterModifier: ViewModifier, TextFieldLimiter {
+	
+	@Binding var text: String
+	var limit: Int
+	
+	func body(content: Content) -> some View {
+		content
+			.onReceive(Just(text)) { _ in limitText($text, limit: limit) }
+	}
+}
+
+extension View {
+	
+	/// Limit the maximum number of characters in a text field
+	func textFieldLimiter(text: Binding<String>, limit: Int) -> some View {
+		return modifier(TextFieldLimiterModifier(text: text, limit: limit))
+	}
 }

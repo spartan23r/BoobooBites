@@ -8,14 +8,12 @@
 import SwiftUI
 import SwiftData
 
-enum MealPlannerScreenType {
-	case calendar, list
-}
-
 struct MealPlannerRoot: View {
 	
 	// MARK: - properties
-	@State private var screenType: MealPlannerScreenType = .calendar
+	@AppStorage("mealPlannerRootScreenType") private var screenType: MealPlannerRootType = .calendar
+	
+	@Environment(SettingsStore.self) private var settingsStore
 	
 	@Environment(\.modelContext) private var modelContext
 	
@@ -25,9 +23,11 @@ struct MealPlannerRoot: View {
 	@State private var currentMonth: Date = Date().startOfMonth(for: .now)
 	@State private var selectedDate: Date = Calendar.current.startOfDay(for: .now)
 	
-	@State private var createNewMealPlan = false
+	@State private var newMealPlan = false
 	
-	@State private var deletePastMealPlansConfirmationDialog = false
+	@State private var showPaywall = false
+	
+	@State private var deleteConfirmationDialog = false
 	
 	@State private var hapticWarning = false
 	@State private var hapticDeleted = false
@@ -44,7 +44,8 @@ struct MealPlannerRoot: View {
 						calendar: calendar,
 						currentMonth: $currentMonth,
 						selectedDate: $selectedDate,
-						createNewMealPlan: $createNewMealPlan
+						newMealPlan: $newMealPlan,
+						showPaywall: $showPaywall
 					)
 					
 				case .list:
@@ -57,7 +58,7 @@ struct MealPlannerRoot: View {
 					
 				}
 			}
-			.navigationBarTitleDisplayMode(.inline)
+			.navigationBarTitleDisplayMode(screenType == .calendar ? .inline : .automatic)
 			.toolbar {
 				
 				if screenType == .calendar {
@@ -67,66 +68,72 @@ struct MealPlannerRoot: View {
 								goToToday()
 							}
 						}
+						.font(.subheadline)
+						.bold()
 					}
 				}
 				
 				ToolbarItemGroup(placement: .primaryAction) {
 					
-					Button {
-						if screenType == .list {
-							goToToday()
-						}
-						createNewMealPlan.toggle()
-					} label: {
-						Image(systemName: "plus")
-					}
-					
 					ControlGroup {
 						
 						Button {
-							withAnimation {
-								screenType = .calendar
-								selectedDate = calendar.startOfDay(for: .now)
-							}
+							switchScreenType(to: .calendar)
 						} label: {
 							Label("Calendar", systemImage: "list.bullet.below.rectangle")
 						}
+						.tint(screenType == .calendar ? .accent : .primary)
 						
 						Button {
-							withAnimation {
-								screenType = .list
-							}
+							switchScreenType(to: .list)
 						} label: {
 							Label("List", systemImage: "list.dash")
 						}
+						.tint(screenType == .list ? .accent : .primary)
 						
 						Divider()
 						
-						Button(role: .destructive) {
-							deletePastMealPlansConfirmationDialog.toggle()
+						Menu {
+							Button(role: .destructive) {
+								deleteConfirmationDialog.toggle()
+								settingsStore.triggerHaptic(&hapticWarning)
+							} label: {
+								Label("Delete All Past Meal Plans", systemImage: "trash")
+							}
+							.disabled(pastMealPlans().isEmpty)
 						} label: {
-							Label("Delete All Past Plans", systemImage: "trash")
+							Text("Remove Meal Plans")
 						}
-						.disabled(pastMealPlans().isEmpty)
 						
 					} label: {
 						Image(systemName: "ellipsis")
 					}
-					.controlGroupStyle(.menu)
-					.confirmationDialog("Delete All Past Meal Plans?", isPresented: $deletePastMealPlansConfirmationDialog, titleVisibility: .visible) {
-						Button("Delete All", role: .destructive) {
+					.controlGroupStyle(.compactMenu)
+					.confirmationDialog("Delete All Past Meal Plans?", isPresented: $deleteConfirmationDialog, titleVisibility: .hidden) {
+						Button("Delete All Past Meal Plans", role: .destructive) {
 							removeAllMealPlans()
 						}
 					} message: {
 						Text("This action cannot be recovered.")
 					}
 					
+					Button {
+						createNewMealPlan()
+					} label: {
+						Image(systemName: "plus")
+					}
+					
 				}
 				
 			}
-			.sheet(isPresented: $createNewMealPlan) {
-				MealPlannerAdd(isPresented: $createNewMealPlan, selectedDate: selectedDate)
+			.sheet(isPresented: $newMealPlan) {
+				MealPlannerAdd(isPresented: $newMealPlan, selectedDate: $selectedDate) {
+					if screenType == .list {
+						goToToday()
+					}
+				}
 			}
+			.showPaywall(showPaywallMessage: $showPaywall, paywallMessage: .mealplans)
 			.sensoryFeedback(.warning, trigger: hapticWarning)
 			.sensoryFeedback(.success, trigger: hapticDeleted)
 		}
@@ -140,31 +147,64 @@ struct MealPlannerRoot: View {
 // MARK: - utilities
 extension MealPlannerRoot {
 	
+	private func reachFreeMealPlansLimit() -> Bool {
+		if mealPlans.count >= 14 && !ProAccessManager.premiumPurchased { return true } else { return false }
+	}
+	
+	private func createNewMealPlan() {
+		switch reachFreeMealPlansLimit() {
+		case true: showPaywall.toggle()
+		case false: newMealPlan.toggle()
+		}
+	}
+	
 	private func goToToday() {
 		currentMonth = Date().startOfMonth(for: .now)
 		selectedDate = calendar.startOfDay(for: .now)
 	}
 	
-	private func switchScreenType() {
+	private func switchScreenType(to type: MealPlannerRootType) {
 		withAnimation {
-			switch screenType {
-			case .calendar: screenType = .list
-			case .list:
-				goToToday()
-				screenType = .calendar
+			switch type {
+			case .calendar: screenType = .calendar
+			case .list: screenType = .list
 			}
+			goToToday()
 		}
+	}
+	
+	private var today: Date {
+		calendar.startOfDay(for: Date())
 	}
 	
 	private func upcomingMealPlans() -> [MealPlan] {
 		mealPlans
-			.filter({ $0.date > Date() })
+			.filter { calendar.startOfDay(for: $0.date) >= today }
+			.sorted { lhs, rhs in
+				let lhsDay = calendar.startOfDay(for: lhs.date)
+				let rhsDay = calendar.startOfDay(for: rhs.date)
+
+				if lhsDay == rhsDay {
+					return lhs.mealType.sortOrder < rhs.mealType.sortOrder
+				}
+
+				return lhsDay < rhsDay
+			}
 	}
-	
+
 	private func pastMealPlans() -> [MealPlan] {
 		mealPlans
-			.filter({ $0.date < Date() })
-			.sorted(by: { $0.date > $1.date })
+			.filter { calendar.startOfDay(for: $0.date) < today }
+			.sorted { lhs, rhs in
+				let lhsDay = calendar.startOfDay(for: lhs.date)
+				let rhsDay = calendar.startOfDay(for: rhs.date)
+
+				if lhsDay == rhsDay {
+					return lhs.mealType.sortOrder > rhs.mealType.sortOrder
+				}
+
+				return lhsDay > rhsDay
+			}
 	}
 	
 	private func removeAllMealPlans() {
@@ -190,7 +230,7 @@ extension MealPlannerRoot {
 			print("Error removing folder: \(error.localizedDescription)")
 		}
 		
-		hapticDeleted.toggle()
+		settingsStore.triggerHaptic(&hapticDeleted)
 	}
 	
 }

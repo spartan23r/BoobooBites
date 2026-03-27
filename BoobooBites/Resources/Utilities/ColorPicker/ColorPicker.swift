@@ -29,7 +29,11 @@ struct ColorPickerView: View {
 						
 						ForEach(Color.allColors, id: \.self) { color in
 							colorButton(color)
-								.scaleOpacityBlurScrollTransition(scale: 0.2, opacity: 0.2, blurRadius: 0.6)
+								.scrollTransition { effect, phase in
+									effect
+										.opacity(phase.isIdentity ? 1 : 0.8)
+										.blur(radius: phase.isIdentity ? 0 : 0.6)
+								}
 						}
 						
 					}
@@ -93,9 +97,13 @@ struct StringColorPickerView: View {
 		ScrollView(.horizontal, showsIndicators: false) {
 			Grid {
 				GridRow {
-					ForEach(ProAccessManager.hasProAccess == false ? Color.rgbColors : Color.allColors, id: \.self) { color in
+					ForEach(Color.allColors, id: \.self) { color in
 						colorButton(color)
-							.scaleOpacityBlurScrollTransition(scale: 0.2, opacity: 0.2, blurRadius: 0.6)
+							.scrollTransition { effect, phase in
+								effect
+									.opacity(phase.isIdentity ? 1 : 0.8)
+									.blur(radius: phase.isIdentity ? 0 : 0.6)
+							}
 					}
 				}
 			}

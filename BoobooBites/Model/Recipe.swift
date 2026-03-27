@@ -1,5 +1,5 @@
 //
-//  RecipeModel.swift
+//  Recipe.swift
 //  BoobooBites
 //
 //  Created by Ryan Rook on 20/03/2026.
@@ -13,70 +13,40 @@ final class Recipe: Identifiable {
 	
 	var id = UUID()
 	var name = String()
-	var notes: String? = nil
-	var instructions: String? = nil
-	var prepTime: Int?  = nil // minutes
-	var cookTime: Int? = nil // minutes
-	var servings: Int? = nil // people
+	var notes = String()
+	var color: String = "appleRed"
+	var isFavorite: Bool = false
+	var instructions = String()
+	var prepTime: Int = 0 // minutes
+	var cookTime: Int = 0 // minutes
+	var servings: Int = 1 // persons
 	var createdAt = Date()
-	var updatedAt = Date()
+	var lastUpdated = Date()
 	
 	var ingredients: [RecipeIngredient]
 	
-	init(id: UUID, name: String, notes: String? = nil, instructions: String, prepTime: Int? = nil, cookTime: Int? = nil, servings: Int? = nil, createdAt: Date, updatedAt: Date) {
+	@Relationship(deleteRule: .cascade, inverse: \MealPlan.recipe) var mealPlans: [MealPlan] = []
+	
+	init(id: UUID = UUID(), name: String = String(), notes: String = String(), color: String = "appleRed", isFavorite: Bool = false, instructions: String = String(), prepTime: Int = 0, cookTime: Int = 0, servings: Int = 1, createdAt: Date = Date(), lastUpdated: Date = Date(), ingredients: [RecipeIngredient]) {
 		self.id = id
 		self.name = name
 		self.notes = notes
+		self.color = color
+		self.isFavorite = isFavorite
 		self.instructions = instructions
 		self.prepTime = prepTime
 		self.cookTime = cookTime
 		self.servings = servings
 		self.createdAt = createdAt
-		self.updatedAt = updatedAt
+		self.lastUpdated = lastUpdated
+		self.ingredients = ingredients
 	}
-}
-
-@Model
-final class RecipeIngredient: Identifiable {
 	
-	var id = UUID()
-	var ingredient: Ingredient
-	
-	var amount: Double = Double()
-	var unit: UnitType
-	
-	var note: String? = nil
-	
-	init(id: UUID = UUID(), ingredient: Ingredient, amount: Double, unit: UnitType, note: String? = nil) {
-		self.id = id
-		self.ingredient = ingredient
-		self.amount = amount
-		self.unit = unit
-		self.note = note
+	var totalTime: Int {
+		prepTime + cookTime
 	}
-}
-
-@Model
-final class Ingredient {
 	
-	var id = UUID()
-	var name = String()
-	var defaultUnit: UnitType? = nil
-	
-	init(id: UUID = UUID(), name: String, defaultUnit: UnitType? = nil) {
-		self.id = id
-		self.name = name
-		self.defaultUnit = defaultUnit
+	var ingredientCount: Int {
+		ingredients.count
 	}
-}
-
-enum UnitType: String {
-	case grams
-	case kilograms
-	case milliliters
-	case liters
-	case pieces
-	case teaspoons
-	case tablespoons
-	case cups
 }

@@ -22,20 +22,27 @@
 	},
 	{
 		"id": 3,
+		"text": "BreakFree",
+		"subtext": "Track Bad Habits",
+		"link": "apps.apple.com/app/id6476882248",
+		"image": "icon-breakfree"
+	},
+	{
+		"id": 4,
 		"text": "FurPal",
 		"subtext": "Dog Health Tracker",
 		"link": "apps.apple.com/app/id6449543246",
 		"image": "icon-pawrent"
 	},
 	{
-		"id": 4,
+		"id": 5,
 		"text": "Pocket Board",
 		"subtext": "Track Game Scores",
 		"link": "apps.apple.com/app/id6463712215",
 		"image": "icon-pocketboard"
 	},
 	{
-		"id": 5,
+		"id": 6,
 		"text": "Icebreaker",
 		"subtext": "Questions Game",
 		"link": "apps.apple.com/app/id6752701576",

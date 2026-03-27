@@ -7,12 +7,7 @@
 
 import SwiftUI
 
-struct MealPlannerRootType: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-    }
-}
-
-#Preview {
-    MealPlannerRootType()
+enum MealPlannerRootType: Int, Codable {
+	case calendar
+	case list
 }

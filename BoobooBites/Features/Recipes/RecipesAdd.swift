@@ -6,14 +6,28 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct RecipesAdd: View {
 	
 	// MARK: - properties
 	@Binding var isPresented: Bool
 	
+	@Environment(SettingsStore.self) private var settingsStore
+	
+	@Environment(\.modelContext) private var modelContext
+	
 	@State private var name: String = ""
+	@FocusState private var nameIsFocused: Bool
+	
 	@State private var notes: String = ""
+	
+	@State var selectedColor: Color = .appleRed
+	
+	@Query(sort: \Ingredient.name, order: .forward) private var storedIngredients: [Ingredient]
+	
+	@State private var ingredients: [RecipeIngredient] = []
+	
 	@State private var instructions: String = ""
 	
 	@State private var prepTime: Int? = nil
@@ -26,55 +40,302 @@ struct RecipesAdd: View {
 		return formatter
 	}()
 	
+	let decimalFormatter: NumberFormatter = {
+		let formatter = NumberFormatter()
+		formatter.numberStyle = .decimal
+		return formatter
+	}()
+	
+	@State private var newIngredient = false
+	@State private var addStoredIngredient = false
+	
+	@State private var hapticSaved = false
+	
+	@State private var showPaywall = false
+	
 	// MARK: - body
     var body: some View {
 		NavigationStack {
 			Form {
 				
 				Section {
+					
 					TextField("Name", text: $name)
-						.keyboardType(.namePhonePad)
+						.keyboardType(.default)
 						.bold()
+						.focused($nameIsFocused)
+						.textInputAutocapitalization(.words)
+						.textFieldLimiter(text: $name, limit: 32)
+					
 					TextField("Notes", text: $notes, axis: .vertical)
+						.keyboardType(.default)
+						.textInputAutocapitalization(.sentences)
+					
+					ColorPickerView(selectedColor: $selectedColor)
+					
 				}
 				
 				Section {
+					
+					LabeledContent {
+						TextField(prepTime != 1 ? "Minutes" : "Minute", value: $prepTime, formatter: numberFormatter)
+							.keyboardType(.numberPad)
+							.multilineTextAlignment(.trailing)
+					} label: {
+						HStack {
+							Image(systemName: "circle")
+								.symbolVariant(.fill)
+								.font(.caption)
+								.foregroundStyle(.recipePrepTime.gradient)
+							Text("Prep time")
+						}
+					}
+					
+					LabeledContent {
+						TextField(cookTime != 1 ? "Minutes" : "Minute", value: $cookTime, formatter: numberFormatter)
+							.keyboardType(.numberPad)
+							.multilineTextAlignment(.trailing)
+					} label: {
+						HStack {
+							Image(systemName: "circle")
+								.symbolVariant(.fill)
+								.font(.caption)
+								.foregroundStyle(.recipeCookTime.gradient)
+							Text("Cook time")
+						}
+					}
+					
+					LabeledContent {
+						TextField(servings != 1 ? "Persons" : "Person", value: $servings, formatter: numberFormatter)
+							.keyboardType(.numberPad)
+							.multilineTextAlignment(.trailing)
+					} label: {
+						HStack {
+							Image(systemName: "circle")
+								.symbolVariant(.fill)
+								.font(.caption)
+								.foregroundStyle(.recipeServings.gradient)
+							Text("Servings")
+						}
+					}
+					
+				}
+				
+				Section {
+					
+//					ScrollView(.horizontal) {
+//						
+//						let selectedIDs = Set(ingredients.map { $0.ingredient.id })
+//						
+//						let availableIngredients = storedIngredients.filter {
+//							!selectedIDs.contains($0.id)
+//						}
+//						
+//						HStack {
+//							ForEach(availableIngredients, id: \.id) { ingredient in
+//								Button(ingredient.name) {
+//									withAnimation {
+//										ingredients.append(RecipeIngredient(ingredient: ingredient, unit: ingredient.defaultUnit))
+//									}
+//								}
+//								.font(.callout)
+//								.tint(Color.convertStringToColor(ingredient.color).gradient)
+//								.padding(.vertical, 3)
+//								.padding(.horizontal, 6)
+//								.glassEffectStyle(color: Color.convertStringToColor(ingredient.color).opacity(0.2))
+//								.scrollTransition { effect, phase in
+//									effect
+//										.opacity(phase.isIdentity ? 1 : 0.8)
+//										.blur(radius: phase.isIdentity ? 0 : 0.6)
+//								}
+//								
+//							}
+//						}
+//						
+//						if storedIngredients.isEmpty || availableIngredients.isEmpty {
+//							
+//							Text("No stored ingredients available")
+//								.foregroundStyle(.secondary)
+//							
+//						}
+//						
+//					}
+//					.scrollClipDisabled()
+//					.scrollIndicators(.hidden)
+					
+//					Button {
+//						addStoredIngredient.toggle()
+//					} label: {
+//						
+//						LabeledContent {
+//							HStack(spacing: 3) {
+//								Text("\(availableIngredients.count)")
+//									.contentTransition(.numericText())
+//									.foregroundStyle(.sonicRed)
+//									.font(.caption2)
+////									.bold()
+//									.padding(.vertical, 3)
+//									.padding(.horizontal, 6)
+//									.glassEffectStyle(color: .sonicRed.opacity(0.2))
+//								Image(systemName: "chevron.right")
+//									.font(.caption)
+//									.foregroundStyle(.accent)
+//							}
+//						} label: {
+//							HStack {
+//								Image(systemName: "circle")
+//									.symbolVariant(.fill)
+//									.font(.caption)
+//									.foregroundStyle(.sonicRed.gradient)
+//								Text("Stored")
+//							}
+//						}
+//						.contentShape(Rectangle())
+//						
+//					}
+//					.buttonStyle(.plain)
+//					.disabled(availableIngredients.isEmpty)
+					
+					// MARK: - SHOW ADDED INGREDIENTS HERE
+					if ingredients.count > 0 {
+						ForEach(ingredients.indices.sorted { ingredients[$0].ingredient.name < ingredients[$1].ingredient.name }, id: \.self ) { index in
+								
+							VStack(alignment: .leading, spacing: 3) {
+								
+								HStack {
+									Image(systemName: "circle")
+										.symbolVariant(.fill)
+										.font(.caption)
+										.foregroundStyle(Color.convertStringToColor(ingredients[index].ingredient.color).gradient)
+									Text(ingredients[index].ingredient.name)
+								}
+								
+								LabeledContent {
+									Picker("Unit", selection: $ingredients[index].unit) {
+										ForEach(UnitType.allCases, id: \.self) { unit in
+											Text(unit.rawValue.lowercased()).tag(unit)
+										}
+									}
+									.tint(.accent)
+									.labelsHidden()
+									.contentShape(Rectangle())
+								} label: {
+									TextField("unit value", value: $ingredients[index].amount, formatter: decimalFormatter)
+										.keyboardType(.decimalPad)
+										.multilineTextAlignment(.trailing)
+								}
+								
+							}
+							.swipeActions(edge: .trailing, allowsFullSwipe: false) {
+								Button(role: .destructive) {
+									withAnimation {
+										ingredients.removeAll(where: { $0.id == ingredients[index].id })
+									}
+								}
+							}
+							
+//							HStack {
+//								Image(systemName: "circle")
+//									.symbolVariant(.fill)
+//									.font(.caption)
+//									.foregroundStyle(Color.convertStringToColor(ingredients[index].ingredient.color).gradient)
+//								Text(ingredients[index].ingredient.name)
+//							}
+//							.swipeActions(edge: .trailing, allowsFullSwipe: false) {
+//								Button(role: .destructive) {
+//									withAnimation {
+//										ingredients.removeAll(where: { $0.id == ingredients[index].id })
+//									}
+//								}
+//							}
+//							.listRowSeparator(.hidden, edges: .bottom)
+//							
+//							LabeledContent {
+//								Picker("Unit", selection: $ingredients[index].unit) {
+//									ForEach(UnitType.allCases, id: \.self) { unit in
+//										Text(unit.rawValue.lowercased()).tag(unit)
+//									}
+//								}
+//								.tint(.accent)
+//								.labelsHidden()
+//							} label: {
+//								TextField("unit value", value: $ingredients[index].amount, formatter: numberFormatter)
+//									.keyboardType(.numberPad)
+//									.multilineTextAlignment(.trailing)
+//							}
+							
+						}
+					}
+
+				} header: {
+					HStack {
+						
+						Text("Ingredients")
+						
+						Spacer()
+						
+						if availableIngredients.isEmpty {
+							
+							Button {
+								createNewIngredient()
+							} label: {
+								Image(systemName: "plus")
+							}
+							
+						} else {
+							
+							Menu {
+								
+								Button {
+									addStoredIngredient.toggle()
+								} label: {
+									Label("Stored Ingredients (\(availableIngredients.count))", systemImage: "carrot")
+								}
+								.disabled(availableIngredients.isEmpty)
+								
+								Divider()
+								
+								Button {
+									createNewIngredient()
+								} label: {
+									Label("Create New", systemImage: "plus")
+								}
+								
+							} label: {
+								Image(systemName: "plus")
+							}
+							
+						}
+						
+					}
+				}
+				
+				Section {
+					
 					TextField("Instructions", text: $instructions, axis: .vertical)
-				}
-				
-				
-				Section {
+						.keyboardType(.default)
+						.textInputAutocapitalization(.sentences)
 					
-					LabeledContent {
-						TextField("Minutes", value: $prepTime, formatter: numberFormatter)
-							.keyboardType(.numberPad)
-							.multilineTextAlignment(.trailing)
-					} label: {
-						Text("Prep time")
-					}
+				} header: {
 					
-					LabeledContent {
-						TextField("Minutes", value: $cookTime, formatter: numberFormatter)
-							.keyboardType(.numberPad)
-							.multilineTextAlignment(.trailing)
-					} label: {
-						Text("Cook time")
-					}
-					
-					LabeledContent {
-						TextField("Persons", value: $servings, formatter: numberFormatter)
-							.keyboardType(.numberPad)
-							.multilineTextAlignment(.trailing)
-					} label: {
-						Text("Servings")
-					}
+					Text("Instructions")
 					
 				}
 				
 			}
 			.navigationTitle("New Recipe")
-			.navigationSubtitle("Booboo Bite")
 			.navigationBarTitleDisplayMode(.inline)
+			.scrollDismissesKeyboard(.interactively)
+			.sheet(isPresented: $newIngredient) {
+				IngredientsAdd(isPresented: $newIngredient) { ingredient in
+					addNewIngredient(ingredient)
+				}
+			}
+			.sheet(isPresented: $addStoredIngredient) {
+				IngredientsMultiPicker(isPresented: $addStoredIngredient, storedIngredients: availableIngredients) { pickedIngredients in
+					addPickedIngredients(pickedIngredients)
+				}
+			}
 			.toolbar {
 				
 				ToolbarItem(placement: .topBarLeading) {
@@ -85,14 +346,17 @@ struct RecipesAdd: View {
 				
 				ToolbarItem(placement: .primaryAction) {
 					Button(role: .confirm) {
-						
+						saveNewRecipe()
 					}
 					.disabled(disabledToSave())
 				}
 				
 			}
+			.showPaywall(showPaywallMessage: $showPaywall, paywallMessage: .ingredients)
 			.presentationDetents([.large])
 			.interactiveDismissDisabled()
+			.onAppear { nameIsFocused = true }
+			.sensoryFeedback(.success, trigger: hapticSaved)
 		}
     }
 }
@@ -104,12 +368,67 @@ struct RecipesAdd: View {
 // MARK: - utilities
 extension RecipesAdd {
 	
+	private func reachFreeIngredientsLimit() -> Bool {
+		if storedIngredients.count >= 12 && !ProAccessManager.premiumPurchased { return true } else { return false }
+	}
+	
+	private func createNewIngredient() {
+		switch reachFreeIngredientsLimit() {
+		case true: showPaywall.toggle()
+		case false: newIngredient.toggle()
+		}
+	}
+	
+	private var availableIngredients: [Ingredient] {
+		let selectedIDs = Set(ingredients.map { $0.ingredient.id })
+		
+		return storedIngredients.filter {
+			!selectedIDs.contains($0.id)
+		}
+	}
+	
+	private func addNewIngredient(_ ingredient: Ingredient) {
+		withAnimation {
+			ingredients.append(RecipeIngredient(ingredient: ingredient, unit: ingredient.defaultUnit))
+		}
+	}
+	
+	private func addPickedIngredients(_ pickedIngredients: [Ingredient]) {
+		pickedIngredients.forEach { ingredient in
+			withAnimation {
+				ingredients.append(RecipeIngredient(ingredient: ingredient, unit: ingredient.defaultUnit))
+			}
+		}
+	}
+	
 	private func disabledToSave() -> Bool {
 		if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
 			return true
 		} else {
 			return false
 		}
+	}
+	
+	func saveNewRecipe() {
+		let recipe = Recipe(
+			name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+			notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
+			color: Color.convertColorToString(selectedColor),
+			instructions: instructions.trimmingCharacters(in: .whitespacesAndNewlines),
+			prepTime: prepTime ?? 0,
+			cookTime: cookTime ?? 0,
+			servings: servings ?? 0,
+			ingredients: ingredients
+		)
+
+		modelContext.insert(recipe)
+
+		do {
+			try? modelContext.save()
+		}
+		
+		isPresented.toggle()
+		settingsStore.triggerHaptic(&hapticSaved)
 	}
 	
 }

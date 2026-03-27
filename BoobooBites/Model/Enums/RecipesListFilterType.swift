@@ -7,12 +7,25 @@
 
 import SwiftUI
 
-struct RecipesListFilterType: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-    }
-}
-
-#Preview {
-    RecipesListFilterType()
+enum RecipesListFilterType: String, CaseIterable, Codable {
+	case all, favorites
+	
+	var description: String {
+		switch self {
+		case .all:
+			"All Items"
+		case .favorites:
+			"Favorites"
+		}
+	}
+	
+	var image: String {
+		switch self {
+		case .all:
+			"rectangle.grid.1x3"
+		case .favorites:
+			"heart"
+		}
+	}
+	
 }

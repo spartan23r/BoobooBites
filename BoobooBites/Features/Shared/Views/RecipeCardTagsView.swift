@@ -16,38 +16,36 @@ struct RecipeCardTagsView: View {
     var body: some View {
 		HStack {
 			
-//			HStack(spacing: 3) {
-//				Image(systemName: "carrot")
-//					.symbolVariant(.fill)
-//					.font(.caption2)
-//				Text("\(recipe.ingredients.count, format: .number)")
-//					.font(.caption)
-//			}
-//			.foregroundStyle(.sonicRed.gradient)
-//			.padding(6)
-//			.glassEffectStyle(color: .sonicRed.opacity(0.2))
+//			Image(systemName: "fork.knife")
+//				.symbolVariant(.fill)
+//				.font(.caption2)
+//				.foregroundStyle(Color.convertStringToColor(recipe.color).gradient)
+//				.padding(6)
+//				.glassEffectStyle(color: Color.convertStringToColor(recipe.color).opacity(0.2), cornerRadius: 100)
 			
 			HStack(spacing: 3) {
 				Image(systemName: "clock")
 					.symbolVariant(.fill)
 					.font(.caption2)
-				Text("\(recipe.prepTime, format: .number)")
+				Text("\((recipe.prepTime + recipe.cookTime), format: .number)")
 					.font(.caption)
+					.contentTransition(.numericText())
 			}
-			.foregroundStyle(.sonicBlue.gradient)
+			.foregroundStyle(.recipePrepTime.gradient)
 			.padding(6)
-			.glassEffectStyle(color: .sonicBlue.opacity(0.2))
+			.glassEffectStyle(color: .recipePrepTime.opacity(0.2))
 			
 			HStack(spacing: 3) {
-				Image(systemName: "clock")
+				Image(systemName: "carrot")
 					.symbolVariant(.fill)
 					.font(.caption2)
-				Text("\(recipe.cookTime, format: .number)")
+				Text("\(recipe.ingredients.count, format: .number)")
 					.font(.caption)
+					.contentTransition(.numericText())
 			}
-			.foregroundStyle(.tailsOrange.gradient)
+			.foregroundStyle(.recipeIngredients.gradient)
 			.padding(6)
-			.glassEffectStyle(color: .tailsOrange.opacity(0.2))
+			.glassEffectStyle(color: .recipeIngredients.opacity(0.2))
 			
 			HStack(spacing: 3) {
 				Image(systemName: "person")
@@ -55,10 +53,11 @@ struct RecipeCardTagsView: View {
 					.font(.caption2)
 				Text("\(recipe.servings, format: .number)")
 					.font(.caption)
+					.contentTransition(.numericText())
 			}
-			.foregroundStyle(.sonicGreen.gradient)
+			.foregroundStyle(.recipeServings.gradient)
 			.padding(6)
-			.glassEffectStyle(color: .sonicGreen.opacity(0.2))
+			.glassEffectStyle(color: .recipeServings.opacity(0.2))
 			
 		}
     }

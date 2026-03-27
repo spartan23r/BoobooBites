@@ -8,11 +8,34 @@
 import SwiftUI
 
 struct MealPlanCardView: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-    }
+	
+	// MARK: - properties
+	let mealPlan: MealPlan
+	var showDate = false
+	
+	// MARK: - body
+	var body: some View {
+		NavigationLink {
+			
+			MealPlannerItem(mealPlan: mealPlan)
+			
+		} label: {
+			
+			VStack(alignment: .leading, spacing: 9) {
+				MealPlanDescriptionView(mealPlan: mealPlan, showDate: showDate)
+				RecipeCardTagsView(recipe: mealPlan.recipe)
+			}
+			
+		}
+	}
 }
 
 #Preview {
-    MealPlanCardView()
+	MealPlanCardView(mealPlan: MealPlan(recipe: Recipe(name: "Curry", ingredients: [])))
 }
+
+// MARK: - utilities
+extension MealPlanCardView {}
+
+// MARK: - views
+extension MealPlanCardView {}

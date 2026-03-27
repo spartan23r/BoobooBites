@@ -7,12 +7,29 @@
 
 import SwiftUI
 
-struct HorizontalPaddingModifier: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
-    }
+private protocol HorizontalPadding {
+	
+	var edge: Edge.Set { get }
+	var length: Int { get }
+	var paddingMultiplier: Int { get }
 }
 
-#Preview {
-    HorizontalPaddingModifier()
+private struct HorizontalPaddingModifier: ViewModifier, HorizontalPadding {
+	
+	var edge: Edge.Set = .horizontal
+	var length: Int = 9
+	var paddingMultiplier: Int = 1
+	
+	func body(content: Content) -> some View {
+		content
+			.padding(edge, CGFloat(length * paddingMultiplier))
+	}
+}
+
+extension View {
+	
+	func horizontalPadding(paddingMultiplier: Int? = nil) -> some View {
+		guard let value = paddingMultiplier else { return modifier(HorizontalPaddingModifier()) }
+		return modifier(HorizontalPaddingModifier(paddingMultiplier: value))
+	}
 }
