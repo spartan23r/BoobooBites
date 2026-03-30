@@ -16,4 +16,15 @@ enum UnitType: String, CaseIterable, Codable {
 	case teaspoons
 	case tablespoons
 	case cups
+	
+	var defaultValue: Double {
+		switch self {
+		case .grams, .milliliters:
+			return 100
+		case .kilograms, .liters:
+			return 2
+		case .pieces, .teaspoons, .tablespoons, .cups:
+			return 1
+		}
+	}
 }

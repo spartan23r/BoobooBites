@@ -11,121 +11,124 @@ import SwiftData
 struct MealPlannerList: View {
 	
 	// MARK: - properties
+	@State private var expandUpcomingSection = true
 	var upcomingMealPlans: [MealPlan]
+	
+	@State private var expandPastSection = false
 	var pastMealPlans: [MealPlan]
 	
-//	@Binding var isPresented: Bool
-	let calendar: Calendar
-//	private let calendar = Calendar.current
+	@Binding var newMealPlan: Bool
 	
-//	@Environment(\.modelContext) private var modelContext
-	
-//	@Query(sort: \MealPlan.date) private var mealPlans: [MealPlan]
-	
-	@State private var expandUpcomingSection = true
-	@State private var expandPastSection = false
+	@Binding var showPaywall: Bool
 	
 	// MARK: - body
 	var body: some View {
-//		NavigationStack {
-			Form {
-				
-				Section {
-					if expandUpcomingSection {
-						if upcomingMealPlans.isEmpty {
-							Text("No upcoming plans")
-								.foregroundStyle(.secondary)
-						} else {
-							ForEach(upcomingMealPlans) { mealPlan in
-								MealPlanCardView(mealPlan: mealPlan, showDate: true)
+		Form {
+			
+			Section {
+				if expandUpcomingSection {
+					if upcomingMealPlans.isEmpty {
+						ContentUnavailableView {
+							Label("No meals planned", systemImage: "clock.badge.questionmark")
+						} description: {
+							Text("Plan your week to stay organized")
+						} actions: {
+							Button("Plan a meal") {
+								createNewMealPlan()
 							}
+							.buttonStyle(.glassProminent)
 						}
-					}
-				} header: {
-					Button {
-						withAnimation {
-							expandUpcomingSection.toggle()
+					} else {
+						ForEach(upcomingMealPlans) { mealPlan in
+							MealPlanCardView(mealPlan: mealPlan, showDate: true)
 						}
-					} label: {
-						HStack {
-							
-							Text("Upcoming")
-							
-							Spacer()
-							
-							if !expandUpcomingSection {
-								Text("\(upcomingMealPlans.count)")
-							}
-							
-							Image(systemName: "chevron.right")
-								.font(.caption)
-								.rotationEffect(.degrees(expandUpcomingSection ? 90 : 0))
-							
-						}
-						.bold()
 					}
 				}
-				
-				Section {
-					if expandPastSection {
-						if pastMealPlans.isEmpty {
-							Text("Your completed plans will be shown here")
-								.foregroundStyle(.secondary)
-						} else {
-							ForEach(pastMealPlans) { mealPlan in
-								MealPlanCardView(mealPlan: mealPlan, showDate: true)
-							}
-						}
+			} header: {
+				Button {
+					withAnimation {
+						expandUpcomingSection.toggle()
 					}
-				} header: {
-					Button {
-						withAnimation {
-							expandPastSection.toggle()
+				} label: {
+					HStack {
+						
+						Text("Upcoming")
+						
+						Spacer()
+						
+						if !expandUpcomingSection {
+							Text("\(upcomingMealPlans.count)")
 						}
-					} label: {
-						HStack {
-							
-							Text("Past")
-							
-							Spacer()
-							
-							if !expandPastSection {
-								Text("\(pastMealPlans.count)")
-							}
-							
-							Image(systemName: "chevron.right")
-								.font(.caption)
-								.rotationEffect(.degrees(expandPastSection ? 90 : 0))
-							
-						}
-						.bold()
+						
+						Image(systemName: "chevron.right")
+							.font(.caption)
+							.rotationEffect(.degrees(expandUpcomingSection ? 90 : 0))
+						
 					}
+					.bold()
 				}
-				
 			}
-			.navigationTitle("Meal Planner")
-			.navigationSubtitle("\(upcomingMealPlans.count) upcoming")
-//			.toolbar {
-//				
-//				ToolbarItem(placement: .topBarLeading) {
-//					Button(role: .close) {
-//						isPresented.toggle()
-//					}
-//				}
-//				
-//			}
-//			.presentationDetents([.large])
-//			.interactiveDismissDisabled()
-//		}
+			
+			Section {
+				if expandPastSection {
+					if pastMealPlans.isEmpty {
+						Text("Your completed plans will be shown here")
+							.foregroundStyle(.secondary)
+					} else {
+						ForEach(pastMealPlans) { mealPlan in
+							MealPlanCardView(mealPlan: mealPlan, showDate: true)
+						}
+					}
+				}
+			} header: {
+				Button {
+					withAnimation {
+						expandPastSection.toggle()
+					}
+				} label: {
+					HStack {
+						
+						Text("Past")
+						
+						Spacer()
+						
+						if !expandPastSection {
+							Text("\(pastMealPlans.count)")
+						}
+						
+						Image(systemName: "chevron.right")
+							.font(.caption)
+							.rotationEffect(.degrees(expandPastSection ? 90 : 0))
+						
+					}
+					.bold()
+				}
+			}
+			
+		}
+		.navigationTitle("Meal Planner")
+		.navigationSubtitle("\(upcomingMealPlans.count) upcoming")
 	}
 }
 
 #Preview {
-	MealPlannerList(upcomingMealPlans: [], pastMealPlans: [], calendar: Calendar.current)
+	MealPlannerList(upcomingMealPlans: [], pastMealPlans: [], newMealPlan: .constant(false), showPaywall: .constant(false))
 }
 
 // MARK: - utilities
-extension MealPlannerList {}
+extension MealPlannerList {
+	
+	private func reachFreeMealPlansLimit() -> Bool {
+		if (upcomingMealPlans + pastMealPlans).count >= 14 && !ProAccessManager.premiumPurchased { return true } else { return false }
+	}
+	
+	private func createNewMealPlan() {
+		switch reachFreeMealPlansLimit() {
+		case true: showPaywall.toggle()
+		case false: newMealPlan.toggle()
+		}
+	}
+}
 
 // MARK: - views
 extension MealPlannerList {}

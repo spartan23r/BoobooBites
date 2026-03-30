@@ -44,20 +44,21 @@ struct IngredientsAdd: View {
 						.textInputAutocapitalization(.words)
 						.textFieldLimiter(text: $name, limit: 32)
 					
-					TextField("Notes", text: $notes, axis: .vertical)
-						.keyboardType(.default)
-						.textInputAutocapitalization(.sentences)
-					
-				}
-				
-				Section {
 					ColorPickerView(selectedColor: $selectedColor)
+					
 					Picker("Default unit", selection: $selectedDefaultUnit) {
 						ForEach(UnitType.allCases, id: \.self) { unit in
 							Text(unit.rawValue.lowercased()).tag(unit)
 						}
 					}
 					.tint(.accent)
+					
+				}
+				
+				Section {
+					TextField("Notes", text: $notes, axis: .vertical)
+						.keyboardType(.default)
+						.textInputAutocapitalization(.sentences)
 				}
 				
 			}
@@ -120,6 +121,6 @@ extension IngredientsAdd {
 		completion(ingredient)
 		isPresented.toggle()
 		settingsStore.triggerHaptic(&hapticSaved)
-//		hapticSaved.toggle()
+		AnalyticsUtils.logButtonTap(screen: .ingredientAdd, button: .save)
 	}
 }

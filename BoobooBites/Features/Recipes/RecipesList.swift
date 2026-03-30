@@ -13,7 +13,7 @@ struct RecipesList: View {
 	// MARK: - properties
 	@Environment(SettingsStore.self) private var settingsStore
 	
-	@Query(sort: \Recipe.name, order: .forward) private var recipes: [Recipe]
+	@Query private var recipes: [Recipe]
 	
 	@State private var newRecipe = false
 	
@@ -118,14 +118,6 @@ struct RecipesList: View {
 					Menu {
 						
 						Button {
-							showIngredientsList.toggle()
-						} label: {
-							Label("Ingredients", systemImage: "carrot")
-						}
-						
-						Divider()
-						
-						Button {
 							showSettings.toggle()
 						} label: {
 							Label("Settings", systemImage: "gear")
@@ -133,6 +125,12 @@ struct RecipesList: View {
 						
 					} label: {
 						Image(systemName: "ellipsis")
+					}
+					
+					Button {
+						showIngredientsList.toggle()
+					} label: {
+						Label("Ingredients", systemImage: "carrot")
 					}
 					
 					Button {
@@ -154,7 +152,7 @@ struct RecipesList: View {
 						Text("Start building your personal cookbook")
 					} actions: {
 						
-						Button("Create your first recipe") {
+						Button("Create recipe") {
 							createNewRecipe()
 						}
 						.buttonStyle(.glassProminent)
@@ -169,11 +167,12 @@ struct RecipesList: View {
 					if sortedRecipes().count == 0 {
 						
 						ContentUnavailableView {
-							Label("No recipes found", image: "fork.knife.badge.questionmark")
+							Label("No favorite recipes yet", systemImage: "heart")
+								.symbolVariant(.fill)
 						} description: {
-							Text("Change your filter options")
+							Text("Mark recipes as favorites to see them here")
 						} actions: {
-							Button("Remove filter") {
+							Button("Show all recipes") {
 								withAnimation {
 									settingsStore.recipesListFilterType = .all
 								}
@@ -200,7 +199,7 @@ struct RecipesList: View {
 extension RecipesList {
 	
 	private func reachFreeRecipesLimit() -> Bool {
-		if recipes.count >= 3 && !ProAccessManager.premiumPurchased { return true } else { return false }
+		if recipes.count >= 7 && !ProAccessManager.premiumPurchased { return true } else { return false }
 	}
 	
 	private func createNewRecipe() {
@@ -299,13 +298,13 @@ extension RecipesList {
 				cookTime: 25,
 				servings: 4,
 				ingredients: [
-					RecipeIngredient(ingredient: Ingredient(name: "Carrots", color: "appleOrange", defaultUnit: .grams), amount: 60, unit: .grams),
-					RecipeIngredient(ingredient: Ingredient(name: "Chicken", color: "appleRed", defaultUnit: .grams), amount: 120, unit: .grams),
-					RecipeIngredient(ingredient: Ingredient(name: "Onion", color: "applePurple", defaultUnit: .pieces), amount: 1, unit: .pieces),
-					RecipeIngredient(ingredient: Ingredient(name: "Garlic", color: "applePurple", defaultUnit: .pieces), amount: 1, unit: .pieces),
-					RecipeIngredient(ingredient: Ingredient(name: "Potatoes", color: "appleYellow", defaultUnit: .grams), amount: 80, unit: .grams),
-					RecipeIngredient(ingredient: Ingredient(name: "Rice", color: "appleGray", defaultUnit: .cups), amount: 2, unit: .cups),
-					RecipeIngredient(ingredient: Ingredient(name: "Water", color: "appleBlue", defaultUnit: .milliliters), amount: 550, unit: .milliliters)
+					RecipeIngredient(name: "Carrots", color: "appleOrange", unit: .grams, amount: 60, sourceIngredientID: nil),
+					RecipeIngredient(name: "Chicken", color: "appleRed", unit: .grams, amount: 120, sourceIngredientID: nil),
+					RecipeIngredient(name: "Onion", color: "applePurple", unit: .pieces, amount: 1, sourceIngredientID: nil),
+					RecipeIngredient(name: "Garlic", color: "applePurple", unit: .pieces, amount: 1, sourceIngredientID: nil),
+					RecipeIngredient(name: "Potatoes", color: "appleYellow", unit: .grams, amount: 80, sourceIngredientID: nil),
+					RecipeIngredient(name: "Rice", color: "appleGray", unit: .cups, amount: 2, sourceIngredientID: nil),
+					RecipeIngredient(name: "Water", color: "appleBlue", unit: .milliliters, amount: 550, sourceIngredientID: nil)
 				]
 			),
 			Recipe(
@@ -317,14 +316,14 @@ extension RecipesList {
 				cookTime: 20,
 				servings: 4,
 				ingredients: [
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient())
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil)
 				]
 			),
 			Recipe(
@@ -336,10 +335,10 @@ extension RecipesList {
 				cookTime: 0,
 				servings: 1,
 				ingredients: [
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient())
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil)
 				]
 			),
 			Recipe(
@@ -351,15 +350,15 @@ extension RecipesList {
 				cookTime: 15,
 				servings: 3,
 				ingredients: [
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient())
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil)
 				]
 			),
 			Recipe(
@@ -403,16 +402,16 @@ extension RecipesList {
 				cookTime: 10,
 				servings: 2,
 				ingredients: [
-					RecipeIngredient(ingredient: Ingredient(name: "Broccoli", color: "appleGreen", defaultUnit: .grams), amount: 100, unit: .grams),
-					RecipeIngredient(ingredient: Ingredient(name: "Bell Pepper", color: "appleRed", defaultUnit: .pieces), amount: 1, unit: .pieces),
-					RecipeIngredient(ingredient: Ingredient(name: "Carrots", color: "appleOrange", defaultUnit: .grams), amount: 70, unit: .grams),
-					RecipeIngredient(ingredient: Ingredient(name: "Snap Peas", color: "appleGreen", defaultUnit: .grams), amount: 80, unit: .grams),
-					RecipeIngredient(ingredient: Ingredient(name: "Mushrooms", color: "appleBrown", defaultUnit: .grams), amount: 60, unit: .grams),
-					RecipeIngredient(ingredient: Ingredient(name: "Onion", color: "applePurple", defaultUnit: .pieces), amount: 1, unit: .pieces),
-					RecipeIngredient(ingredient: Ingredient(name: "Garlic", color: "applePurple", defaultUnit: .pieces), amount: 2, unit: .pieces),
-					RecipeIngredient(ingredient: Ingredient(name: "Soy Sauce", color: "appleBrown", defaultUnit: .tablespoons), amount: 2, unit: .tablespoons),
-					RecipeIngredient(ingredient: Ingredient(name: "Noodles", color: "appleYellow", defaultUnit: .grams), amount: 120, unit: .grams),
-					RecipeIngredient(ingredient: Ingredient(name: "Sesame Oil", color: "appleOrange", defaultUnit: .teaspoons), amount: 1, unit: .teaspoons)
+					RecipeIngredient(name: "Broccoli", color: "appleGreen", unit: .grams, amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "Bell Pepper", color: "appleRed", unit: .pieces, amount: 1, sourceIngredientID: nil),
+					RecipeIngredient(name: "Carrots", color: "appleOrange", unit: .grams, amount: 70, sourceIngredientID: nil),
+					RecipeIngredient(name: "Snap Peas", color: "appleGreen", unit: .grams, amount: 80, sourceIngredientID: nil),
+					RecipeIngredient(name: "Mushrooms", color: "appleBrown", unit: .grams, amount: 60, sourceIngredientID: nil),
+					RecipeIngredient(name: "Onion", color: "applePurple", unit: .pieces, amount: 1, sourceIngredientID: nil),
+					RecipeIngredient(name: "Garlic", color: "applePurple", unit: .pieces, amount: 2, sourceIngredientID: nil),
+					RecipeIngredient(name: "Soy Sauce", color: "appleBrown", unit: .tablespoons, amount: 2, sourceIngredientID: nil),
+					RecipeIngredient(name: "Noodles", color: "appleYellow", unit: .grams, amount: 120, sourceIngredientID: nil),
+					RecipeIngredient(name: "Sesame Oil", color: "appleOrange", unit: .teaspoons, amount: 1, sourceIngredientID: nil)
 				]
 			),
 			Recipe(
@@ -424,12 +423,12 @@ extension RecipesList {
 				cookTime: 10,
 				servings: 2,
 				ingredients: [
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient())
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
 				]
 			),
 			Recipe(
@@ -441,14 +440,14 @@ extension RecipesList {
 				cookTime: 12,
 				servings: 2,
 				ingredients: [
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient()),
-					RecipeIngredient(ingredient: Ingredient())
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil),
+					RecipeIngredient(name: "", color: "appleRed", amount: 100, sourceIngredientID: nil)
 				]
 			),
 		]

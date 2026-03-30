@@ -29,9 +29,9 @@ private struct ShowPaywallViewModifier: ViewModifier, ShowPaywall {
 				Paywall(isPresented: $showPaywall)
 			}
 			.alert(paywallMessage.title, isPresented: $showPaywallMessage, actions: {
-				Button("Upgrade", role: .confirm) {
-					showPaywall.toggle()
-				}
+				Button("Not now", role: .cancel) {}
+				Button("Get Booboo Bites +", role: .confirm) { showPaywall.toggle() }
+					.keyboardShortcut(.defaultAction)
 			}, message: {
 				Text(paywallMessage.description)
 			})

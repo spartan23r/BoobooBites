@@ -51,6 +51,14 @@ struct Onboarding: View {
 									.spring
 							}
 						
+					}
+					
+				}
+				.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+				.background(.accent)
+				.safeAreaInset(edge: .bottom) {
+					if showWelcomeAnimations {
+					
 						Grid(horizontalSpacing: 24) {
 							GridRow {
 								
@@ -74,10 +82,7 @@ struct Onboarding: View {
 						.transition(.push(from: .bottom).combined(with: .scale))
 						
 					}
-					
 				}
-				.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-				.background(.accent)
 				.sensoryFeedback(.success, trigger: finishedOnboardingHaptic)
 				.onAppear {
 					DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {

@@ -12,18 +12,20 @@ import SwiftData
 final class RecipeIngredient: Identifiable {
 	
 	var id = UUID()
-	var ingredient: Ingredient
-	
-	var amount: Double = Double()
+	var name = String()
+	var notes = String()
+	var color: String = "apple.red"
 	var unit: UnitType = UnitType.grams
+	var amount: Double = Double()
+	var sourceIngredientID: UUID?
 	
-	var note: String? = nil
-	
-	init(id: UUID = UUID(), ingredient: Ingredient, amount: Double = 1, unit: UnitType = .grams, note: String? = nil) {
+	init(id: UUID = UUID(), name: String  = String(), notes: String = String(), color: String = "appleRed", unit: UnitType = .grams, amount: Double, sourceIngredientID: UUID?) {
 		self.id = id
-		self.ingredient = ingredient
-		self.amount = amount
+		self.name = name
+		self.notes = notes
+		self.color = color
 		self.unit = unit
-		self.note = note
+		self.amount = amount
+		self.sourceIngredientID = sourceIngredientID
 	}
 }

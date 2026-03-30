@@ -18,6 +18,7 @@ struct BoobooBitesApp: App {
 	@StateObject private var purchaseStore = PurchaseStore()
 	
 	@State private var searchableText: String = ""
+	@State private var selectedSearchListType: SearchListType = .recipes
 	
 	// MARK: - body
 	var body: some Scene {
@@ -70,8 +71,8 @@ extension BoobooBitesApp {
 			}
 			
 			Tab(role: .search) {
-				RecipesSearchList(searchableText: $searchableText)
-					.searchable(text: $searchableText, prompt: "Search on name, notes, instructions, and ingredients")
+				SearchList(selectedSearchListType: $selectedSearchListType, searchableText: $searchableText)
+					.searchable(text: $searchableText, prompt: selectedSearchListType == .recipes ? "Search on name, notes, instructions, and ingredients" : "Search on name, and notes")
 			}
 		}
 	}

@@ -13,13 +13,11 @@ final class Ingredient {
 	
 	var id = UUID()
 	var name = String()
-	var notes: String? = nil
+	var notes = String()
 	var color: String = "appleRed"
-	var defaultUnit: UnitType = UnitType.grams
+	var defaultUnit: UnitType
 	
-	@Relationship(deleteRule: .cascade, inverse: \RecipeIngredient.ingredient) var recipeIngredients: [RecipeIngredient] = []
-	
-	init(id: UUID = UUID(), name: String = String(), notes: String? = nil, color: String = "appleRed", defaultUnit: UnitType = .grams) {
+	init(id: UUID = UUID(), name: String = String(), notes: String = String(), color: String = "appleRed", defaultUnit: UnitType) {
 		self.id = id
 		self.name = name
 		self.notes = notes

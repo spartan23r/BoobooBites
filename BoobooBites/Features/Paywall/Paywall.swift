@@ -85,8 +85,8 @@ struct Paywall: View {
 								
 								VStack(alignment: .center, spacing: 6) {
 									Label(PaywallMessage.recipes.paywallDescription, systemImage: PaywallMessage.recipes.paywallImage)
-									Label(PaywallMessage.mealplans.paywallDescription, systemImage: PaywallMessage.mealplans.paywallImage)
 									Label(PaywallMessage.ingredients.paywallDescription, systemImage: PaywallMessage.ingredients.paywallImage)
+									Label(PaywallMessage.mealplans.paywallDescription, systemImage: PaywallMessage.mealplans.paywallImage)
 								}
 								.blurOpacityEffect(initialAnimation)
 								.font(.callout.bold())

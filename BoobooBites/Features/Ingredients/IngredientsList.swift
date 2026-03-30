@@ -17,31 +17,24 @@ struct IngredientsList: View {
 	
 	@Environment(\.modelContext) private var modelContext
 	
-	@Query(sort: \Ingredient.name, order: .forward) private var ingredients: [Ingredient]
+	@Query private var ingredients: [Ingredient]
 	
 	@State private var newIngredient = false
 	
 	@State private var showPaywall = false
 	
+	@State private var deleteConfirmationDialog = false
+	
+	@State private var hapticWarning = false
+	@State private var hapticDeleted = false
+	
+	@Query private var recipeIngredients: [RecipeIngredient]
+	
 	// MARK: - body
 	var body: some View {
 		NavigationStack {
 			List(sortedIngredients(), id: \.self) { ingredient in
-				NavigationLink {
-					
-					IngredientsItem(ingredient: ingredient) { _ in }
-					
-				} label: {
-					HStack {
-						Image(systemName: "circle")
-							.symbolVariant(.fill)
-							.symbolEffect(.wiggle, value: Color.convertStringToColor(ingredient.color))
-							.font(.caption)
-							.foregroundStyle(Color.convertStringToColor(ingredient.color).gradient)
-						Text(ingredient.name)
-							.contentTransition(.numericText())
-					}
-				}
+				IngredientCardView(ingredient: ingredient)
 			}
 			.navigationTitle("Ingredients")
 			.navigationSubtitle("\(ingredients.count) stored")
@@ -87,24 +80,42 @@ struct IngredientsList: View {
 					
 				}
 				
-				
-				ToolbarItem(placement: .primaryAction) {
+				ToolbarItemGroup(placement: .primaryAction) {
+					
+					Menu {
+						Button("Delete All", systemImage: "trash", role: .destructive) {
+							deleteConfirmationDialog.toggle()
+							settingsStore.triggerHaptic(&hapticWarning)
+						}
+						.disabled(ingredients.isEmpty)
+					} label: {
+						Image(systemName: "ellipsis")
+					}
+					.confirmationDialog("Delete All Ingredients?", isPresented: $deleteConfirmationDialog, titleVisibility: .hidden) {
+						Button("Delete All Ingredients", role: .destructive) {
+							removeAllIngredients()
+						}
+					} message: {
+						Text("All ingredients will be removed from your list, but existing recipes will stay unchanged. This action can’t be undone.")
+					}
+					
 					Button {
 						createNewIngredient()
 					} label: {
 						Image(systemName: "plus")
 					}
+					
 				}
 				
 			}
 			.overlay(alignment: .center) {
 				if ingredients.isEmpty {
 					ContentUnavailableView {
-						Label("No ingredients available", image: "carrot.badge.questionmark")
+						Label("No ingredients yet", image: "carrot.badge.questionmark")
 					} description: {
-						Text("Added ingredients will be shown here")
+						Text("Add ingredients to reuse in your recipes")
 					} actions: {
-						Button("Add new ingredient") {
+						Button("Add ingredient") {
 							newIngredient.toggle()
 						}
 						.buttonStyle(.glassProminent)
@@ -113,7 +124,10 @@ struct IngredientsList: View {
 			}
 			.showPaywall(showPaywallMessage: $showPaywall, paywallMessage: .ingredients)
 			.presentationDetents([.large])
-			.interactiveDismissDisabled()
+			.presentationDragIndicator(.visible)
+//			.interactiveDismissDisabled()
+			.sensoryFeedback(.warning, trigger: hapticWarning)
+			.sensoryFeedback(.success, trigger: hapticDeleted)
 		}
 	}
 }
@@ -126,7 +140,7 @@ struct IngredientsList: View {
 extension IngredientsList {
 	
 	private func reachFreeIngredientsLimit() -> Bool {
-		if ingredients.count >= 12 && !ProAccessManager.premiumPurchased { return true } else { return false }
+		if ingredients.count >= 25 && !ProAccessManager.premiumPurchased { return true } else { return false }
 	}
 	
 	private func createNewIngredient() {
@@ -147,6 +161,41 @@ extension IngredientsList {
 		}
 		
 		return ingredientsList
+	}
+	
+	private func removeAllIngredients() {
+		Task {
+			try await Task.sleep(
+				until: .now + .nanoseconds(33),
+				tolerance: .seconds(1),
+				clock: .suspending
+			)
+			deleteAllIngredients()
+		}
+	}
+	
+	private func deleteAllIngredients() {
+		DispatchQueue.main.async {
+			ingredients.forEach { ingredient in
+				modelContext.delete(ingredient)
+			}
+			clearRecipeIngredientsSourceIngredientID()
+			
+			do {
+				try modelContext.save()
+			} catch {
+				print("Error removing folder: \(error.localizedDescription)")
+			}
+			
+			settingsStore.triggerHaptic(&hapticDeleted)
+			AnalyticsUtils.logButtonTap(screen: .ingredientList, button: .deleteAll)
+		}
+	}
+	
+	private func clearRecipeIngredientsSourceIngredientID() {
+		recipeIngredients.forEach { recipeIngredient in
+			recipeIngredient.sourceIngredientID = nil
+		}
 	}
 	
 }

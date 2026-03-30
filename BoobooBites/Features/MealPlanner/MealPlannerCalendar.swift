@@ -16,13 +16,14 @@ struct MealPlannerCalendar: View {
 	var mealPlans: [MealPlan]
 	
 	let calendar: Calendar
+	let today: Date
 	
 	@Binding var currentMonth: Date
 	@Binding var selectedDate: Date
 	
 	@State private var dragOffset: CGFloat = 0
 	
-	@State private var hapticSwitchingMonth = false
+	@Binding var hapticSelection: Bool
 	
 	@Binding var newMealPlan: Bool
 	
@@ -33,18 +34,18 @@ struct MealPlannerCalendar: View {
 		VStack {
 			weekdayHeader
 			monthGrid
+			swipeToBrowseTipView
 			selectedDateMealsList
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.background(.offWhite)
 		.navigationTitle(currentMonth.formatted(.dateTime.month(.wide).year()))
 		.navigationSubtitle("Selected: \(selectedDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year()))")
-		.sensoryFeedback(.selection, trigger: hapticSwitchingMonth)
 	}
 }
 
 #Preview {
-	MealPlannerCalendar(mealPlans: [], calendar: Calendar.current, currentMonth: .constant(Date()), selectedDate: .constant(Date()), newMealPlan: .constant(false), showPaywall: .constant(false))
+	MealPlannerCalendar(mealPlans: [], calendar: AppCalendar.shared, today: Date().startOfDay, currentMonth: .constant(Date()), selectedDate: .constant(Date()), hapticSelection: .constant(false), newMealPlan: .constant(false), showPaywall: .constant(false))
 }
 
 // MARK: - utilities
@@ -62,13 +63,11 @@ extension MealPlannerCalendar {
 	}
 	
 	private func mealPlans(for date: Date) -> [MealPlan] {
-		let normalizedDate = calendar.startOfDay(for: date)
+		let normalizedDate = date.startOfDay
 
-		return mealPlans.filter {
-			calendar.isDate($0.date, inSameDayAs: normalizedDate)
-		}.sorted {
-			$0.mealType.sortOrder < $1.mealType.sortOrder
-		}
+		return mealPlans
+			.filter { $0.date.startOfDay == normalizedDate }
+			.sorted { $0.mealType.sortOrder < $1.mealType.sortOrder }
 	}
 
 	private var weekdaySymbols: [String] {
@@ -96,7 +95,7 @@ extension MealPlannerCalendar {
 		guard
 			let monthInterval = calendar.dateInterval(of: .month, for: currentMonth),
 			let firstWeekInterval = calendar.dateInterval(of: .weekOfMonth, for: monthInterval.start),
-			let lastWeekInterval = calendar.dateInterval(of: .weekOfMonth, for: monthInterval.end - 1)
+			let lastWeekInterval = calendar.dateInterval(of: .weekOfMonth, for: monthInterval.end.addingDays(-1, using: calendar))
 		else {
 			return []
 		}
@@ -113,7 +112,7 @@ extension MealPlannerCalendar {
 				dates.append(nil)
 			}
 			
-			current = calendar.date(byAdding: .day, value: 1, to: current)!
+			current = current.addingDays(1, using: calendar)
 		}
 		
 		return dates
@@ -128,14 +127,15 @@ extension MealPlannerCalendar {
 				if let date {
 					MealPlanDayView(
 						date: date,
-						isToday: Calendar.current.isDateInToday(date),
-						isSelected: Calendar.current.isDate(selectedDate, inSameDayAs: date),
+						isToday: date.startOfDay == today,
+						isSelected: selectedDate.startOfDay == date.startOfDay,
 						mealCount: mealPlans(for: date).count
 					)
 					.onTapGesture {
 						withAnimation {
-							selectedDate = date
+							selectedDate = date.startOfDay
 						}
+						settingsStore.triggerHaptic(&hapticSelection)
 					}
 				} else {
 					Color.clear
@@ -174,17 +174,33 @@ extension MealPlannerCalendar {
 	}
 	
 	private func goToNextMonth() {
+		settingsStore.hideSwipeMonthsTipView()
 		withAnimation(.bouncy) {
-			currentMonth = Calendar.current.date(byAdding: .month, value: 1, to: currentMonth) ?? currentMonth
+			currentMonth = currentMonth.addingMonths(1, using: calendar).startOfMonth
 		}
-		settingsStore.triggerHaptic(&hapticSwitchingMonth)
+		settingsStore.triggerHaptic(&hapticSelection)
+	}
+
+	private func goToPreviousMonth() {
+		settingsStore.hideSwipeMonthsTipView()
+		withAnimation(.bouncy) {
+			currentMonth = currentMonth.addingMonths(-1, using: calendar).startOfMonth
+		}
+		settingsStore.triggerHaptic(&hapticSelection)
 	}
 	
-	private func goToPreviousMonth() {
-		withAnimation(.bouncy) {
-			currentMonth = Calendar.current.date(byAdding: .month, value: -1, to: currentMonth) ?? currentMonth
+	@ViewBuilder
+	private var swipeToBrowseTipView: some View {
+		if settingsStore.hideSwipeMonthsTip == false {
+			Label {
+				Image(systemName: "arrow.left.and.right")
+			} icon: {
+				Text("Swipe to browse months")
+			}
+			.font(.caption)
+			.foregroundStyle(.secondary)
+			.transition(.asymmetric(insertion: .opacity, removal: .push(from: .leading)))
 		}
-		settingsStore.triggerHaptic(&hapticSwitchingMonth)
 	}
 }
 
@@ -211,14 +227,13 @@ extension MealPlannerCalendar {
 				ContentUnavailableView {
 					Label("No meals planned", systemImage: "clock.badge.questionmark")
 				} description: {
-					Text("Planned meals will be shown here")
+					Text("Plan your week to stay organized")
 				} actions: {
 					Button("Plan a meal") {
 						createNewMealPlan()
 					}
 					.buttonStyle(.glassProminent)
-				}
-				
+				}	
 			} else {
 				ForEach(selectedDateMealPlans, id: \.self) { mealPlan in
 					MealPlanCardView(mealPlan: mealPlan)

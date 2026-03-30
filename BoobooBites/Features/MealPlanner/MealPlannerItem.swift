@@ -19,10 +19,15 @@ struct MealPlannerItem: View {
 	
 	@State var mealPlan: MealPlan
 	
+	@State private var editDate: Bool = false
+	@State private var editDateValue: Date = Date().startOfDay
+	@State private var editMealTypeValue: MealType = .dinner
+	
 	@State private var deleteConfirmationDialog = false
 	
 	@State private var hapticWarning = false
 	@State private var hapticDeleted = false
+	@State private var hapticSaved = false
 	
 	// MARK: - body
 	var body: some View {
@@ -31,6 +36,11 @@ struct MealPlannerItem: View {
 				
 				Section {
 					mealPlanDateView
+				} header: {
+					if settingsStore.hideEditTip == false {
+						Label("Swipe left to edit fields", systemImage: "info.bubble")
+							.font(.footnote)
+					}
 				}
 				
 				Section {
@@ -44,6 +54,50 @@ struct MealPlannerItem: View {
 			}
 			.navigationTitle("Meal Plan")
 			.navigationBarTitleDisplayMode(.inline)
+			.sheet(isPresented: $editDate) {
+				NavigationStack {
+					Form {
+						
+						DatePicker("Date", selection: $editDateValue, displayedComponents: .date)
+						
+						
+						Picker(selection: $editMealTypeValue, content: {
+							ForEach(MealType.allCases, id: \.self) { type in
+								Text(type.rawValue.capitalized).tag(type)
+							}
+						}, label: {
+							editMealTypeValue.image
+								.foregroundStyle(.white)
+								.symbolEffect(.rotate, value: editMealTypeValue)
+								.listRoundedIconStyle(bgc: editMealTypeValue.color, filledIconStyle: true)
+								.font(.subheadline)
+						})
+						.tint(.accent)
+						.animation(.smooth, value: editMealTypeValue)
+						
+					}
+					.navigationTitle("Date")
+					.navigationBarTitleDisplayMode(.inline)
+					.toolbar {
+						ToolbarItem(placement: .topBarLeading) {
+							Button(role: .close) {
+								editDate.toggle()
+							}
+						}
+						ToolbarItem(placement: .primaryAction) {
+							Button(role: .confirm) {
+								updateDate()
+							}
+						}
+					}
+					.presentationDetents([.medium, .large])
+					.interactiveDismissDisabled()
+					.onAppear {
+						editDateValue = mealPlan.date
+						editMealTypeValue = mealPlan.mealType
+					}
+				}
+			}
 			.toolbar {
 				ToolbarItem(placement: .primaryAction) {
 					Menu {
@@ -59,14 +113,14 @@ struct MealPlannerItem: View {
 							removeMealPlan()
 						}
 					} message: {
-						Text("This action cannot be recovered.")
+						Text("This meal plan will be deleted. This action can’t be undone.")
 					}
 				}
 			}
 			.presentationDetents([.large])
 			.interactiveDismissDisabled()
 			.sensoryFeedback(.warning, trigger: hapticWarning)
-			.sensoryFeedback(.success, trigger: hapticDeleted)
+			.sensoryFeedback(.success, trigger: [hapticDeleted, hapticSaved])
 		}
 	}
 }
@@ -77,6 +131,15 @@ struct MealPlannerItem: View {
 
 // MARK: - utilities
 extension MealPlannerItem {
+	
+	private func updateDate() {
+		mealPlan.date = editDateValue
+		mealPlan.mealType = editMealTypeValue
+		
+		editDate.toggle()
+		settingsStore.triggerHaptic(&hapticSaved)
+		AnalyticsUtils.logButtonTap(screen: .mealPlanItem, button: .edit)
+	}
 
 	private func removeMealPlan() {
 		Task {
@@ -91,16 +154,21 @@ extension MealPlannerItem {
 	
 	private func deleteMealPlan() {
 		
-		modelContext.delete(mealPlan)
+		dismiss()
 		
-		do {
-			try modelContext.save()
-		} catch {
-			print("Error removing folder: \(error.localizedDescription)")
+		DispatchQueue.main.async {
+			modelContext.delete(mealPlan)
+			
+			do {
+				try modelContext.save()
+			} catch {
+				print("Error removing folder: \(error.localizedDescription)")
+			}
+			
+			settingsStore.triggerHaptic(&hapticDeleted)
+			AnalyticsUtils.logButtonTap(screen: .mealPlanItem, button: .delete)
 		}
 		
-		dismiss()
-		settingsStore.triggerHaptic(&hapticDeleted)
 	}
 }
 
@@ -124,6 +192,15 @@ extension MealPlannerItem {
 				.foregroundStyle(.white)
 				.listRoundedIconStyle(bgc: mealPlan.mealType.color, filledIconStyle: true)
 				.font(.subheadline)
+		}
+		.swipeActions(edge: .trailing, allowsFullSwipe: true) {
+			Button {
+				settingsStore.hideEditTipView()
+				editDate.toggle()
+			} label: {
+				Label("Edit", systemImage: "pencil")
+			}
+			.tint(.appleOrange)
 		}
 	}
 	
@@ -228,7 +305,7 @@ extension MealPlannerItem {
 				
 			} else {
 				
-				ForEach(mealPlan.recipe.ingredients.sorted(by: { $0.ingredient.name < $1.ingredient.name})) { recipeIngredient in
+				ForEach(mealPlan.recipe.ingredients.sorted(by: { $0.name < $1.name})) { recipeIngredient in
 					LabeledContent {
 						HStack {
 							Text(recipeIngredient.amount, format: .number)
@@ -239,8 +316,8 @@ extension MealPlannerItem {
 							Image(systemName: "circle")
 								.symbolVariant(.fill)
 								.font(.caption)
-								.foregroundStyle(Color.convertStringToColor(recipeIngredient.ingredient.color).gradient)
-							Text(recipeIngredient.ingredient.name)
+								.foregroundStyle(Color.convertStringToColor(recipeIngredient.color).gradient)
+							Text(recipeIngredient.name)
 						}
 					}
 				}

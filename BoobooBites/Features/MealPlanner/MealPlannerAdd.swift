@@ -47,9 +47,9 @@ struct MealPlannerAdd: View {
 					}
 				} else {
 					ContentUnavailableView {
-						Label("No recipes available", image: "basket.badge.questionmark")
+						Label("No recipes yet", image: "basket.badge.questionmark")
 					} description: {
-						Text("Available recipes will be shown here")
+						Text("Create a recipe to start planning meals")
 					}
 				}
 				
@@ -116,6 +116,7 @@ extension MealPlannerAdd {
 			
 			isPresented.toggle()
 			settingsStore.triggerHaptic(&hapticSaved)
+			AnalyticsUtils.logButtonTap(screen: .mealPlanAdd, button: .save)
 		}
 	}
 	
@@ -252,7 +253,7 @@ extension MealPlannerAdd {
 				
 			} else {
 				
-				ForEach(recipe.ingredients.sorted(by: { $0.ingredient.name < $1.ingredient.name})) { recipeIngredient in
+				ForEach(recipe.ingredients.sorted(by: { $0.name < $1.name})) { recipeIngredient in
 					LabeledContent {
 						HStack {
 							Text(recipeIngredient.amount, format: .number)
@@ -263,8 +264,8 @@ extension MealPlannerAdd {
 							Image(systemName: "circle")
 								.symbolVariant(.fill)
 								.font(.caption)
-								.foregroundStyle(Color.convertStringToColor(recipeIngredient.ingredient.color).gradient)
-							Text(recipeIngredient.ingredient.name)
+								.foregroundStyle(Color.convertStringToColor(recipeIngredient.color).gradient)
+							Text(recipeIngredient.name)
 						}
 					}
 				}

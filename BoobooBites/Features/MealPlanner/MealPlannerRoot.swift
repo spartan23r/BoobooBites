@@ -11,19 +11,26 @@ import SwiftData
 struct MealPlannerRoot: View {
 	
 	// MARK: - properties
-	@AppStorage("mealPlannerRootScreenType") private var screenType: MealPlannerRootType = .calendar
+	@AppStorage("mealPlannerRootScreenType") private var screenType: MealPlannerRootType = .month
 	
 	@Environment(SettingsStore.self) private var settingsStore
 	
 	@Environment(\.modelContext) private var modelContext
 	
-	@Query(sort: \MealPlan.date) private var mealPlans: [MealPlan]
+	@Query private var mealPlans: [MealPlan]
 	
-	private let calendar = Calendar.current
-	@State private var currentMonth: Date = Date().startOfMonth(for: .now)
-	@State private var selectedDate: Date = Calendar.current.startOfDay(for: .now)
+	let calendar = AppCalendar.shared
+	
+	private let today = Date().startOfDay
+	private let startOfWeek = Date().startOfWeek
+	
+	@State private var selectedDate: Date = Date().startOfDay
+	@State private var currentMonth: Date = Date().startOfMonth
+	@State private var selectedWeekDate: Date = Date().startOfWeek
 	
 	@State private var newMealPlan = false
+	
+	@State private var showRecipeUsage = false
 	
 	@State private var showPaywall = false
 	
@@ -32,18 +39,32 @@ struct MealPlannerRoot: View {
 	@State private var hapticWarning = false
 	@State private var hapticDeleted = false
 	
+	@State private var hapticSelection = false
+	
 	// MARK: - body
     var body: some View {
 		NavigationStack {
 			Group {
 				switch screenType {
-				case .calendar:
+				case .month:
 					
 					MealPlannerCalendar(
 						mealPlans: mealPlans,
 						calendar: calendar,
+						today: today,
 						currentMonth: $currentMonth,
 						selectedDate: $selectedDate,
+						hapticSelection: $hapticSelection,
+						newMealPlan: $newMealPlan,
+						showPaywall: $showPaywall
+					)
+					
+				case .week:
+					
+					MealPlannerWeekly(
+						mealPlans: mealPlans,
+						calendar: calendar,
+						selectedWeekDate: $selectedWeekDate,
 						newMealPlan: $newMealPlan,
 						showPaywall: $showPaywall
 					)
@@ -51,26 +72,68 @@ struct MealPlannerRoot: View {
 				case .list:
 					
 					MealPlannerList(
-						upcomingMealPlans: upcomingMealPlans(),
-						pastMealPlans: pastMealPlans(),
-						calendar: calendar
+						upcomingMealPlans: upcomingMealPlans,
+						pastMealPlans: pastMealPlans,
+						newMealPlan: $newMealPlan,
+						showPaywall: $showPaywall
 					)
 					
 				}
 			}
-			.navigationBarTitleDisplayMode(screenType == .calendar ? .inline : .automatic)
+			.navigationBarTitleDisplayMode(.inline)
 			.toolbar {
 				
-				if screenType == .calendar {
+				if screenType == .week {
 					ToolbarItemGroup(placement: .topBarLeading) {
+						Button {
+							goToPreviousWeek()
+						} label: {
+							Image(systemName: "chevron.left")
+						}
+						Button {
+							goToNextWeek()
+						} label: {
+							Image(systemName: "chevron.right")
+						}
+					}
+				}
+				
+				if screenType == .month {
+					ToolbarItem(placement: .primaryAction) {
 						Button("Today") {
-							withAnimation {
-								goToToday()
-							}
+							goToToday()
+							settingsStore.triggerHaptic(&hapticSelection)
 						}
 						.font(.subheadline)
 						.bold()
 					}
+					
+					ToolbarSpacer(.fixed, placement: .primaryAction)
+				}
+				
+				if screenType == .week {
+					ToolbarItem(placement: .primaryAction) {
+						Button("This Week") {
+							goToThisWeek()
+							settingsStore.triggerHaptic(&hapticSelection)
+						}
+						.font(.subheadline)
+						.bold()
+					}
+					
+					ToolbarSpacer(.fixed, placement: .primaryAction)
+				}
+				
+				if screenType == .list {
+					ToolbarItem(placement: .primaryAction) {
+						Button {
+							showRecipeUsage.toggle()
+						} label: {
+							Image(systemName: "chart.bar")
+						}
+					}
+					
+					ToolbarSpacer(.fixed, placement: .primaryAction)
 				}
 				
 				ToolbarItemGroup(placement: .primaryAction) {
@@ -78,44 +141,52 @@ struct MealPlannerRoot: View {
 					ControlGroup {
 						
 						Button {
-							switchScreenType(to: .calendar)
+							switchScreenType(to: .month)
 						} label: {
-							Label("Calendar", systemImage: "list.bullet.below.rectangle")
+							Label(MealPlannerRootType.month.title, systemImage: MealPlannerRootType.month.image)
 						}
-						.tint(screenType == .calendar ? .accent : .primary)
+						.tint(screenType == .month ? .accent : .primary)
+						
+						Button {
+							switchScreenType(to: .week)
+						} label: {
+							Label(MealPlannerRootType.week.title, systemImage: MealPlannerRootType.week.image)
+						}
+						.tint(screenType == .week ? .accent : .primary)
 						
 						Button {
 							switchScreenType(to: .list)
 						} label: {
-							Label("List", systemImage: "list.dash")
+							Label(MealPlannerRootType.list.title, systemImage: MealPlannerRootType.list.image)
 						}
 						.tint(screenType == .list ? .accent : .primary)
 						
-						Divider()
-						
-						Menu {
-							Button(role: .destructive) {
-								deleteConfirmationDialog.toggle()
-								settingsStore.triggerHaptic(&hapticWarning)
-							} label: {
-								Label("Delete All Past Meal Plans", systemImage: "trash")
-							}
-							.disabled(pastMealPlans().isEmpty)
-						} label: {
-							Text("Remove Meal Plans")
-						}
+//						Divider()
+//						
+//						Menu {
+//							Button(role: .destructive) {
+//								deleteConfirmationDialog.toggle()
+//								settingsStore.triggerHaptic(&hapticWarning)
+//							} label: {
+//								Label("Delete All Past Meal Plans", systemImage: "trash")
+//							}
+//							.disabled(pastMealPlans.isEmpty)
+//						} label: {
+//							Text("Remove Meal Plans")
+//						}
 						
 					} label: {
-						Image(systemName: "ellipsis")
+						Image(systemName: screenType.image)
+						
 					}
-					.controlGroupStyle(.compactMenu)
-					.confirmationDialog("Delete All Past Meal Plans?", isPresented: $deleteConfirmationDialog, titleVisibility: .hidden) {
-						Button("Delete All Past Meal Plans", role: .destructive) {
-							removeAllMealPlans()
-						}
-					} message: {
-						Text("This action cannot be recovered.")
-					}
+					.controlGroupStyle(.menu)
+//					.confirmationDialog("Delete All Past Meal Plans?", isPresented: $deleteConfirmationDialog, titleVisibility: .hidden) {
+//						Button("Delete All Past Meal Plans", role: .destructive) {
+//							removeAllMealPlans()
+//						}
+//					} message: {
+//						Text("All past meal plans will be deleted. This action can’t be undone.")
+//					}
 					
 					Button {
 						createNewMealPlan()
@@ -128,14 +199,17 @@ struct MealPlannerRoot: View {
 			}
 			.sheet(isPresented: $newMealPlan) {
 				MealPlannerAdd(isPresented: $newMealPlan, selectedDate: $selectedDate) {
-					if screenType == .list {
-						goToToday()
-					}
+					if screenType == .list { goToToday() }
+					if screenType == .week { goToThisWeekday() }
 				}
+			}
+			.sheet(isPresented: $showRecipeUsage) {
+				MealPlannerRecipeUsage(isPresented: $showRecipeUsage)
 			}
 			.showPaywall(showPaywallMessage: $showPaywall, paywallMessage: .mealplans)
 			.sensoryFeedback(.warning, trigger: hapticWarning)
 			.sensoryFeedback(.success, trigger: hapticDeleted)
+			.sensoryFeedback(.selection, trigger: hapticSelection)
 		}
     }
 }
@@ -147,42 +221,79 @@ struct MealPlannerRoot: View {
 // MARK: - utilities
 extension MealPlannerRoot {
 	
-	private func reachFreeMealPlansLimit() -> Bool {
+	private var reachFreeMealPlansLimit: Bool {
 		if mealPlans.count >= 14 && !ProAccessManager.premiumPurchased { return true } else { return false }
 	}
 	
 	private func createNewMealPlan() {
-		switch reachFreeMealPlansLimit() {
+		switch reachFreeMealPlansLimit {
 		case true: showPaywall.toggle()
 		case false: newMealPlan.toggle()
 		}
 	}
 	
-	private func goToToday() {
-		currentMonth = Date().startOfMonth(for: .now)
-		selectedDate = calendar.startOfDay(for: .now)
-	}
-	
 	private func switchScreenType(to type: MealPlannerRootType) {
 		withAnimation {
 			switch type {
-			case .calendar: screenType = .calendar
-			case .list: screenType = .list
+			case .month:
+				screenType = .month
+				goToToday()
+			case .week:
+				screenType = .week
+				goToThisWeek()
+			case .list:
+				screenType = .list
+				goToToday()
 			}
-			goToToday()
 		}
 	}
 	
-	private var today: Date {
-		calendar.startOfDay(for: Date())
+	private func goToToday() {
+		withAnimation {
+			currentMonth = today.startOfMonth
+			selectedDate = today
+		}
 	}
 	
-	private func upcomingMealPlans() -> [MealPlan] {
+	// weekly
+	private func goToThisWeek() {
+		withAnimation {
+			selectedWeekDate = startOfWeek
+			selectedDate = startOfWeek
+		}
+	}
+	
+	private func goToThisWeekday() {
+		withAnimation {
+			selectedWeekDate = selectedDate.startOfWeek
+		}
+	}
+	
+	private func goToNextWeek() {
+		withAnimation {
+			let startOfWeek = selectedWeekDate.addingWeeks(1, using: calendar).startOfWeek
+			selectedWeekDate = startOfWeek
+			selectedDate = startOfWeek
+		}
+		settingsStore.triggerHaptic(&hapticSelection)
+	}
+	
+	private func goToPreviousWeek() {
+		withAnimation {
+			let startOfWeek = selectedWeekDate.addingWeeks(-1, using: calendar).startOfWeek
+			selectedWeekDate = startOfWeek
+			selectedDate = startOfWeek
+		}
+		settingsStore.triggerHaptic(&hapticSelection)
+	}
+	
+	// list
+	private var upcomingMealPlans: [MealPlan] {
 		mealPlans
-			.filter { calendar.startOfDay(for: $0.date) >= today }
+			.filter { $0.date.startOfDay >= today }
 			.sorted { lhs, rhs in
-				let lhsDay = calendar.startOfDay(for: lhs.date)
-				let rhsDay = calendar.startOfDay(for: rhs.date)
+				let lhsDay = lhs.date.startOfDay
+				let rhsDay = rhs.date.startOfDay
 
 				if lhsDay == rhsDay {
 					return lhs.mealType.sortOrder < rhs.mealType.sortOrder
@@ -192,12 +303,12 @@ extension MealPlannerRoot {
 			}
 	}
 
-	private func pastMealPlans() -> [MealPlan] {
+	private var pastMealPlans: [MealPlan] {
 		mealPlans
-			.filter { calendar.startOfDay(for: $0.date) < today }
+			.filter { $0.date.startOfDay < today }
 			.sorted { lhs, rhs in
-				let lhsDay = calendar.startOfDay(for: lhs.date)
-				let rhsDay = calendar.startOfDay(for: rhs.date)
+				let lhsDay = lhs.date.startOfDay
+				let rhsDay = rhs.date.startOfDay
 
 				if lhsDay == rhsDay {
 					return lhs.mealType.sortOrder > rhs.mealType.sortOrder
@@ -206,31 +317,4 @@ extension MealPlannerRoot {
 				return lhsDay > rhsDay
 			}
 	}
-	
-	private func removeAllMealPlans() {
-		Task {
-			try await Task.sleep(
-				until: .now + .nanoseconds(33),
-				tolerance: .seconds(1),
-				clock: .suspending
-			)
-			deleteAllMealPlans()
-		}
-	}
-	
-	private func deleteAllMealPlans() {
-		
-		pastMealPlans().forEach { mealPlan in
-			modelContext.delete(mealPlan)
-		}
-		
-		do {
-			try modelContext.save()
-		} catch {
-			print("Error removing folder: \(error.localizedDescription)")
-		}
-		
-		settingsStore.triggerHaptic(&hapticDeleted)
-	}
-	
 }

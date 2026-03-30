@@ -198,7 +198,7 @@ struct RecipesAdd: View {
 					
 					// MARK: - SHOW ADDED INGREDIENTS HERE
 					if ingredients.count > 0 {
-						ForEach(ingredients.indices.sorted { ingredients[$0].ingredient.name < ingredients[$1].ingredient.name }, id: \.self ) { index in
+						ForEach(ingredients.indices.sorted { ingredients[$0].name < ingredients[$1].name }, id: \.self ) { index in
 								
 							VStack(alignment: .leading, spacing: 3) {
 								
@@ -206,8 +206,8 @@ struct RecipesAdd: View {
 									Image(systemName: "circle")
 										.symbolVariant(.fill)
 										.font(.caption)
-										.foregroundStyle(Color.convertStringToColor(ingredients[index].ingredient.color).gradient)
-									Text(ingredients[index].ingredient.name)
+										.foregroundStyle(Color.convertStringToColor(ingredients[index].color).gradient)
+									Text(ingredients[index].name)
 								}
 								
 								LabeledContent {
@@ -369,7 +369,7 @@ struct RecipesAdd: View {
 extension RecipesAdd {
 	
 	private func reachFreeIngredientsLimit() -> Bool {
-		if storedIngredients.count >= 12 && !ProAccessManager.premiumPurchased { return true } else { return false }
+		if storedIngredients.count >= 25 && !ProAccessManager.premiumPurchased { return true } else { return false }
 	}
 	
 	private func createNewIngredient() {
@@ -380,7 +380,7 @@ extension RecipesAdd {
 	}
 	
 	private var availableIngredients: [Ingredient] {
-		let selectedIDs = Set(ingredients.map { $0.ingredient.id })
+		let selectedIDs = Set(ingredients.map { $0.sourceIngredientID })
 		
 		return storedIngredients.filter {
 			!selectedIDs.contains($0.id)
@@ -389,14 +389,14 @@ extension RecipesAdd {
 	
 	private func addNewIngredient(_ ingredient: Ingredient) {
 		withAnimation {
-			ingredients.append(RecipeIngredient(ingredient: ingredient, unit: ingredient.defaultUnit))
+			ingredients.append(RecipeIngredient(name: ingredient.name, color: ingredient.color, unit: ingredient.defaultUnit, amount: ingredient.defaultUnit.defaultValue, sourceIngredientID: ingredient.id))
 		}
 	}
 	
 	private func addPickedIngredients(_ pickedIngredients: [Ingredient]) {
 		pickedIngredients.forEach { ingredient in
 			withAnimation {
-				ingredients.append(RecipeIngredient(ingredient: ingredient, unit: ingredient.defaultUnit))
+				ingredients.append(RecipeIngredient(name: ingredient.name, color: ingredient.color, unit: ingredient.defaultUnit, amount: ingredient.defaultUnit.defaultValue, sourceIngredientID: ingredient.id))
 			}
 		}
 	}
@@ -429,6 +429,7 @@ extension RecipesAdd {
 		
 		isPresented.toggle()
 		settingsStore.triggerHaptic(&hapticSaved)
+		AnalyticsUtils.logButtonTap(screen: .recipeAdd, button: .save)
 	}
 	
 }

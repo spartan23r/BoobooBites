@@ -14,7 +14,7 @@ final class MealPlan {
 	var id = UUID()
 	var date = Date()
 	var mealType: MealType = MealType.dinner
-	var recipe: Recipe
+	var recipe: Recipe /*= Recipe(ingredients: [])*/
 	var createdAt = Date()
 	
 	init(id: UUID = UUID(), date: Date = Date(), mealType: MealType = .dinner, recipe: Recipe, createdAt: Date = .now) {

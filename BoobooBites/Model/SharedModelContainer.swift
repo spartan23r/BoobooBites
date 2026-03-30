@@ -12,6 +12,7 @@ final class SharedModelContainer {
 	static var container: ModelContainer = {
 		let schema = Schema([
 			Recipe.self,
+			Ingredient.self,
 		])
 		let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

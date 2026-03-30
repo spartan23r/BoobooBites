@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "booboobites-any.png",
+      "filename" : "bbb-app-icon-light.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "booboobites-dark.png",
+      "filename" : "bbb-app-icon-dark.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "booboobites-tinted.png",
+      "filename" : "bbb-app-icon-tinted.png",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

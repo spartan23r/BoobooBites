@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SettingsList: View {
 	
@@ -14,7 +15,16 @@ struct SettingsList: View {
 	
 	@Environment(SettingsStore.self) private var settingsStore
 	
+	@Environment(\.modelContext) private var modelContext
+	
+	@Query private var mealPlans: [MealPlan]
+	
 	let developerAppsData = Bundle.main.decode([DeveloperApp].self, from: "AppsBySpartan23R.json")
+	
+	@State private var deleteConfirmationDialog = false
+	
+	@State private var hapticWarning = false
+	@State private var hapticDeleted = false
 	
 	// MARK: - body
     var body: some View {
@@ -27,6 +37,7 @@ struct SettingsList: View {
 				
 				generalSection
 				feedbackSection
+				resetOnboardingSection // DEV ONLY
 				otherAppsSection
 			}
 			.navigationTitle("Settings")
@@ -40,6 +51,8 @@ struct SettingsList: View {
 			}
 			.presentationDetents([.large])
 			.presentationDragIndicator(.visible)
+			.sensoryFeedback(.warning, trigger: hapticWarning)
+			.sensoryFeedback(.success, trigger: hapticDeleted)
 		}
     }
 }
@@ -49,7 +62,43 @@ struct SettingsList: View {
 }
 
 // MARK: - utilities
-extension SettingsList {}
+extension SettingsList {
+	
+	private var pastMealPlans: [MealPlan] {
+		let today = Date().startOfDay
+		return mealPlans.filter { $0.date.startOfDay < today }
+	}
+	
+	private func removeAllMealPlans() {
+		Task {
+			try await Task.sleep(
+				until: .now + .nanoseconds(33),
+				tolerance: .seconds(1),
+				clock: .suspending
+			)
+			deleteAllMealPlans()
+		}
+	}
+	
+	private func deleteAllMealPlans() {
+		
+		DispatchQueue.main.async {
+			pastMealPlans.forEach { mealPlan in
+				modelContext.delete(mealPlan)
+			}
+			
+			do {
+				try modelContext.save()
+			} catch {
+				print("Error removing folder: \(error.localizedDescription)")
+			}
+			
+			settingsStore.triggerHaptic(&hapticDeleted)
+		}
+		
+	}
+	
+}
 
 // MARK: - views
 extension SettingsList {
@@ -111,27 +160,45 @@ extension SettingsList {
 	}
 	
 	@ViewBuilder
-	private var resetOnboardingView: some View {
+	private var storageSection: some View {
+		Section {
+			deletePastMealPlansView
+		} header: {
+			Text("Storage")
+		}
+	}
+	
+	@ViewBuilder
+	private var deletePastMealPlansView: some View {
 		Button {
-			isPresented.toggle()
-			withAnimation {
-				settingsStore.resetOnboarding()
-			}
+			deleteConfirmationDialog.toggle()
 		} label: {
-			LabeledContent {
-				Image(systemName: "chevron.right")
-					.foregroundStyle(.accent)
-			} label: {
-				Label {
-					Text("Show Onboarding")
-						.font(.subheadline)
-				} icon: {
-					Image(systemName: "fork.knife")
-						.listRoundedIconStyle(bgc: .accentColor, filledIconStyle: true)
-						.font(.subheadline)
+			Label {
+				Text("Delete Past Meal Plans")
+					.font(.subheadline)
+			} icon: {
+				Image(systemName: "trash")
+					.symbolEffect(.bounce, value: deleteConfirmationDialog)
+					.listRoundedIconStyle(bgc: .sonicRed, filledIconStyle: true)
+					.font(.subheadline)
+			}
+		}
+		.foregroundStyle(.primary)
+		.confirmationDialog("Delete All Past Meal Plans?", isPresented: $deleteConfirmationDialog, titleVisibility: .hidden) {
+			if pastMealPlans.isEmpty {
+				Button(role: .close) {}
+			} else {
+				Button("Delete All Past Meal Plans", role: .destructive) {
+					removeAllMealPlans()
 				}
 			}
-		}.foregroundStyle(.primary)
+		} message: {
+			Text(deletePastMealPlansConfirmationDialogMessage)
+		}
+	}
+	
+	var deletePastMealPlansConfirmationDialogMessage: String {
+		return pastMealPlans.isEmpty ? "You have no past meal plans to delete." : "All past meal plans will be deleted. This action can’t be undone."
 	}
 	
 	@ViewBuilder
@@ -139,7 +206,6 @@ extension SettingsList {
 		Section {
 			rateMeView
 			feedbackView
-			resetOnboardingView
 		} header: {
 			Text("Support")
 		}
@@ -184,6 +250,34 @@ extension SettingsList {
 				}
 			}
 		}.foregroundStyle(.primary)
+	}
+	
+	@ViewBuilder
+	fileprivate var resetOnboardingSection: some View {
+#if targetEnvironment(simulator)
+		Section {
+			Button {
+				isPresented.toggle()
+				withAnimation {
+					settingsStore.resetOnboarding()
+				}
+			} label: {
+				LabeledContent {
+					Image(systemName: "chevron.right")
+						.foregroundStyle(.accent)
+				} label: {
+					Label {
+						Text("Show Onboarding")
+							.font(.subheadline)
+					} icon: {
+						Image(systemName: "fork.knife")
+							.listRoundedIconStyle(bgc: .accentColor, filledIconStyle: true)
+							.font(.subheadline)
+					}
+				}
+			}.foregroundStyle(.primary)
+		}
+#endif
 	}
 	
 	@ViewBuilder

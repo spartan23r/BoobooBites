@@ -72,13 +72,21 @@ final class SettingsStore {
 	}
 	
 	// tooltips
-	// recipe item
 	@ObservationIgnored
-	@AppStorage("hideTooltipRecipeItem") private var persistedHideTooltipRecipeItem: Bool = false
+	@AppStorage("hideEditTip") private var persistedHideEditTip: Bool = false
 	
-	var hideTooltipRecipeItem: Bool = false {
+	var hideEditTip: Bool = false {
 		didSet {
-			persistedHideTooltipRecipeItem = hideTooltipRecipeItem
+			persistedHideEditTip = hideEditTip
+		}
+	}
+	
+	@ObservationIgnored
+	@AppStorage("hideSwipeMonthsTip") private var persistedHideSwipeMonthsTip: Bool = false
+	
+	var hideSwipeMonthsTip: Bool = false {
+		didSet {
+			persistedHideSwipeMonthsTip = hideSwipeMonthsTip
 		}
 	}
 
@@ -95,7 +103,8 @@ final class SettingsStore {
 		
 		ingredientsListSortType = persistedIngredientsListSortType
 		
-		hideTooltipRecipeItem = persistedHideTooltipRecipeItem
+		hideEditTip = persistedHideEditTip
+		hideSwipeMonthsTip = persistedHideSwipeMonthsTip
 	}
 }
 
@@ -104,7 +113,8 @@ extension SettingsStore {
 	
 	func resetOnboarding() {
 		onboardingState = .welcome
-		hideTooltipRecipeItem = false
+		hideEditTip = false
+		hideSwipeMonthsTip = false
 	}
 	
 	func switchOnboardingNextState(finishedOnboardingHaptic: inout Bool) {
@@ -170,10 +180,18 @@ extension SettingsStore {
 // MARK: - tooltips
 extension SettingsStore {
 	
-	func hideRecipeItemTooltip() {
-		if hideTooltipRecipeItem == false {
+	func hideEditTipView() {
+		if hideEditTip == false {
 			withAnimation {
-				hideTooltipRecipeItem = true
+				hideEditTip = true
+			}
+		}
+	}
+	
+	func hideSwipeMonthsTipView() {
+		if hideSwipeMonthsTip == false {
+			withAnimation {
+				hideSwipeMonthsTip = true
 			}
 		}
 	}
