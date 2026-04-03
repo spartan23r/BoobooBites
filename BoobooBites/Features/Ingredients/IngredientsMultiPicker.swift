@@ -49,7 +49,7 @@ struct IngredientsMultiPicker: View {
 			}
 			.navigationTitle("Ingredients")
 			.navigationSubtitle("\(storedIngredients.count) stored")
-			.navigationBarTitleDisplayMode(.inline)
+			.toolbarTitleDisplayMode(.inline)
 			.toolbar {
 				
 				ToolbarItem(placement: .topBarLeading) {

@@ -23,11 +23,15 @@ struct MealPlannerItem: View {
 	@State private var editDateValue: Date = Date().startOfDay
 	@State private var editMealTypeValue: MealType = .dinner
 	
+	@State private var editRecipe: Bool = false
+	
 	@State private var deleteConfirmationDialog = false
 	
 	@State private var hapticWarning = false
 	@State private var hapticDeleted = false
 	@State private var hapticSaved = false
+	
+	@Query(sort: \Recipe.name, order: .forward) private var recipes: [Recipe]
 	
 	// MARK: - body
 	var body: some View {
@@ -36,11 +40,6 @@ struct MealPlannerItem: View {
 				
 				Section {
 					mealPlanDateView
-				} header: {
-					if settingsStore.hideEditTip == false {
-						Label("Swipe left to edit fields", systemImage: "info.bubble")
-							.font(.footnote)
-					}
 				}
 				
 				Section {
@@ -53,7 +52,7 @@ struct MealPlannerItem: View {
 				
 			}
 			.navigationTitle("Meal Plan")
-			.navigationBarTitleDisplayMode(.inline)
+			.toolbarTitleDisplayMode(.large)
 			.sheet(isPresented: $editDate) {
 				NavigationStack {
 					Form {
@@ -90,12 +89,50 @@ struct MealPlannerItem: View {
 							}
 						}
 					}
-					.presentationDetents([.medium, .large])
+					.presentationDetents([.medium])
 					.interactiveDismissDisabled()
 					.onAppear {
 						editDateValue = mealPlan.date
 						editMealTypeValue = mealPlan.mealType
 					}
+				}
+			}
+			.sheet(isPresented: $editRecipe) {
+				NavigationStack {
+					List {
+						if recipes.isEmpty {
+							ContentUnavailableView {
+								Label("No recipes yet", image: "basket.badge.questionmark")
+							} description: {
+								Text("Create a recipe to start planning meals")
+							}
+						} else {
+							ForEach(recipes, id: \.self) { recipe in
+								Text(recipe.name)
+									.multilineTextAlignment(.leading)
+									.foregroundStyle(.white)
+									.bold()
+									.frame(maxWidth: .infinity, alignment: .leading)
+									.listRowSeparator(.hidden)
+									.listRowBackground(Color.convertStringToColor(recipe.color))
+									.contentShape(Rectangle())
+									.onTapGesture {
+										updateRecipe(recipe)
+									}
+							}
+						}
+					}
+					.navigationTitle("Recipes")
+					.navigationBarTitleDisplayMode(.inline)
+					.toolbar {
+						ToolbarItem(placement: .topBarLeading) {
+							Button(role: .close) {
+								editRecipe.toggle()
+							}
+						}
+					}
+					.presentationDetents([.medium, .large])
+					.interactiveDismissDisabled()
 				}
 			}
 			.toolbar {
@@ -110,7 +147,7 @@ struct MealPlannerItem: View {
 					}
 					.confirmationDialog("Delete Meal Plan?", isPresented: $deleteConfirmationDialog, titleVisibility: .hidden) {
 						Button("Delete Meal Plan", role: .destructive) {
-							removeMealPlan()
+							deleteMealPlan()
 						}
 					} message: {
 						Text("This meal plan will be deleted. This action can’t be undone.")
@@ -140,33 +177,32 @@ extension MealPlannerItem {
 		settingsStore.triggerHaptic(&hapticSaved)
 		AnalyticsUtils.logButtonTap(screen: .mealPlanItem, button: .edit)
 	}
-
-	private func removeMealPlan() {
-		Task {
-			try await Task.sleep(
-				until: .now + .nanoseconds(33),
-				tolerance: .seconds(1),
-				clock: .suspending
-			)
-			deleteMealPlan()
-		}
+	
+	private func updateRecipe(_ recipe: Recipe) {
+		mealPlan.recipe = recipe
+		mealPlan.recipeName = recipe.name
+		
+		editRecipe.toggle()
+		settingsStore.triggerHaptic(&hapticSaved)
+		AnalyticsUtils.logButtonTap(screen: .mealPlanItem, button: .edit)
 	}
 	
 	private func deleteMealPlan() {
 		
+		AnalyticsUtils.logButtonTap(screen: .mealPlanItem, button: .delete)
+		settingsStore.triggerHaptic(&hapticDeleted)
 		dismiss()
 		
 		DispatchQueue.main.async {
+			
 			modelContext.delete(mealPlan)
 			
 			do {
 				try modelContext.save()
 			} catch {
-				print("Error removing folder: \(error.localizedDescription)")
+				print("Error removing meal plan: \(error.localizedDescription)")
 			}
 			
-			settingsStore.triggerHaptic(&hapticDeleted)
-			AnalyticsUtils.logButtonTap(screen: .mealPlanItem, button: .delete)
 		}
 		
 	}
@@ -193,160 +229,131 @@ extension MealPlannerItem {
 				.listRoundedIconStyle(bgc: mealPlan.mealType.color, filledIconStyle: true)
 				.font(.subheadline)
 		}
-		.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-			Button {
-				settingsStore.hideEditTipView()
-				editDate.toggle()
-			} label: {
-				Label("Edit", systemImage: "pencil")
-			}
-			.tint(.appleOrange)
+		.contentShape(Rectangle())
+		.onTapGesture {
+			editDate.toggle()
 		}
 	}
 	
 	@ViewBuilder
 	private var recipeNameView: some View {
-		Text(mealPlan.recipe.name)
+		Text(mealPlan.recipe?.name ?? mealPlan.recipeName)
 			.multilineTextAlignment(.trailing)
 			.foregroundStyle(.white)
 			.bold()
 			.frame(maxWidth: .infinity, alignment: .trailing)
-			.listRowBackground(Color.convertStringToColor(mealPlan.recipe.color))
+			.listRowBackground(Color.convertStringToColor(mealPlan.recipe?.color ?? "appleRed"))
 			.listRowSeparator(.hidden, edges: .bottom)
-		
-//		LabeledContent {
-//			Text(mealPlan.recipe.name)
-//				.multilineTextAlignment(.trailing)
-//		} label: {
-//			Image(systemName: "fork.knife")
-//		}
-//		.foregroundStyle(.white)
-//		.bold()
-//		.listRowBackground(Color.convertStringToColor(mealPlan.recipe.color))
-//		.listRowSeparator(.hidden, edges: .bottom)
-		
+			.contentShape(Rectangle())
+			.onTapGesture {
+				editRecipe.toggle()
+			}
 	}
 	
 	@ViewBuilder
 	private var recipeDetailsView: some View {
-		
-		DisclosureGroup {
-				if mealPlan.recipe.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-					
+		if let recipe = mealPlan.recipe {
+			
+			DisclosureGroup {
+				if recipe.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
 					Text("No notes available")
 						.foregroundStyle(.secondary)
-					
 				} else {
-					
-					Text(mealPlan.recipe.notes)
-					
-				}
-		} label: {
-			Text("Notes")
-		}
-		
-		DisclosureGroup {
-			
-			LabeledContent {
-				HStack {
-					Text(mealPlan.recipe.prepTime, format: .number)
-					Text(mealPlan.recipe.prepTime != 1 ? "Minutes" : "Minute")
+					Text(recipe.notes)
 				}
 			} label: {
-				HStack {
-					Image(systemName: "circle")
-						.symbolVariant(.fill)
-						.font(.caption)
-						.foregroundStyle(.recipePrepTime.gradient)
-					Text("Prep time")
-				}
+				Text("Notes")
 			}
 			
-			LabeledContent {
-				HStack {
-					Text(mealPlan.recipe.cookTime, format: .number)
-					Text(mealPlan.recipe.cookTime != 1 ? "Minutes" : "Minute")
-				}
-			} label: {
-				HStack {
-					Image(systemName: "circle")
-						.symbolVariant(.fill)
-						.font(.caption)
-						.foregroundStyle(.recipeCookTime.gradient)
-					Text("Cook time")
-				}
-			}
-			
-			LabeledContent {
-				HStack {
-					Text(mealPlan.recipe.servings, format: .number)
-					Text(mealPlan.recipe.servings != 1 ? "Persons" : "Person")
-				}
-			} label: {
-				HStack {
-					Image(systemName: "circle")
-						.symbolVariant(.fill)
-						.font(.caption)
-						.foregroundStyle(.recipeServings.gradient)
-					Text("Servings")
-				}
-			}
-			
-		} label: {
-			Text("Details")
-		}
-		
-		DisclosureGroup {
-			
-			if mealPlan.recipe.ingredients.isEmpty {
+			DisclosureGroup {
 				
-				Text("No ingredients")
-					.foregroundStyle(.secondary)
-				
-			} else {
-				
-				ForEach(mealPlan.recipe.ingredients.sorted(by: { $0.name < $1.name})) { recipeIngredient in
-					LabeledContent {
-						HStack {
-							Text(recipeIngredient.amount, format: .number)
-							Text(recipeIngredient.unit.rawValue)
-						}
-					} label: {
-						HStack {
-							Image(systemName: "circle")
-								.symbolVariant(.fill)
-								.font(.caption)
-								.foregroundStyle(Color.convertStringToColor(recipeIngredient.color).gradient)
-							Text(recipeIngredient.name)
-						}
+				LabeledContent {
+					HStack {
+						Text(recipe.prepTime, format: .number)
+						Text(recipe.prepTime != 1 ? "Minutes" : "Minute")
+					}
+				} label: {
+					HStack {
+						Image(systemName: "circle")
+							.symbolVariant(.fill)
+							.font(.caption)
+							.foregroundStyle(.recipePrepTime.gradient)
+						Text("Prep time")
 					}
 				}
 				
+				LabeledContent {
+					HStack {
+						Text(recipe.cookTime, format: .number)
+						Text(recipe.cookTime != 1 ? "Minutes" : "Minute")
+					}
+				} label: {
+					HStack {
+						Image(systemName: "circle")
+							.symbolVariant(.fill)
+							.font(.caption)
+							.foregroundStyle(.recipeCookTime.gradient)
+						Text("Cook time")
+					}
+				}
+				
+				LabeledContent {
+					HStack {
+						Text(recipe.servings, format: .number)
+						Text(recipe.servings != 1 ? "Persons" : "Person")
+					}
+				} label: {
+					HStack {
+						Image(systemName: "circle")
+							.symbolVariant(.fill)
+							.font(.caption)
+							.foregroundStyle(.recipeServings.gradient)
+						Text("Servings")
+					}
+				}
+				
+			} label: {
+				Text("Details")
 			}
 			
-		} label: {
-			Text("Ingredients")
-		}
-		
-		DisclosureGroup {
+			DisclosureGroup {
+				if recipe.ingredients.isEmpty {
+					Text("No ingredients")
+						.foregroundStyle(.secondary)
+				} else {
+					ForEach(recipe.ingredients.sorted(by: { $0.name < $1.name})) { recipeIngredient in
+						LabeledContent {
+							HStack {
+								Text(recipeIngredient.amount, format: .number)
+								Text(recipeIngredient.unit.rawValue)
+							}
+						} label: {
+							HStack {
+								Image(systemName: "circle")
+									.symbolVariant(.fill)
+									.font(.caption)
+									.foregroundStyle(Color.convertStringToColor(recipeIngredient.color).gradient)
+								Text(recipeIngredient.name)
+							}
+						}
+					}
+				}
+			} label: {
+				Text("Ingredients")
+			}
 			
-			Group {
-				if mealPlan.recipe.instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-					
+			DisclosureGroup {
+				if recipe.instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
 					Text("No instructions available")
 						.foregroundStyle(.secondary)
-					
 				} else {
-					
-					Text(mealPlan.recipe.instructions)
-					
+					Text(recipe.instructions)
 				}
+			} label: {
+				Text("Instructions")
 			}
 			
-		} label: {
-			Text("Instructions")
 		}
-		
 	}
 	
 }

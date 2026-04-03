@@ -54,7 +54,6 @@ struct RecipesItem: View {
 	@State private var editInstructionsValue = ""
 	
 	@Query(sort: \Ingredient.name, order: .forward) private var storedIngredients: [Ingredient]
-	@Query private var mealPlans: [MealPlan]
 	
 	let numberFormatter: NumberFormatter = {
 		let formatter = NumberFormatter()
@@ -93,14 +92,9 @@ struct RecipesItem: View {
 						.frame(maxWidth: .infinity, alignment: .trailing)
 						.listRowBackground(Color.convertStringToColor(recipe.color))
 						.listRowSeparator(.hidden, edges: .bottom)
-						.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-							Button {
-								settingsStore.hideEditTipView()
-								editName.toggle()
-							} label: {
-								Label("Edit", systemImage: "pencil")
-							}
-							.tint(.appleOrange)
+						.contentShape(Rectangle())
+						.onTapGesture {
+							editName.toggle()
 						}
 					
 					DisclosureGroup(isExpanded: $showNotes) {
@@ -116,50 +110,31 @@ struct RecipesItem: View {
 								
 							}
 						}
+						.frame(maxWidth: .infinity, alignment: .leading)
 						.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-							if !recipe.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-								
-								Button {
-									XPasteboard.general.copyText(recipe.notes)
-									settingsStore.triggerHaptic(&hapticSaved)
-									AnalyticsUtils.logButtonTap(screen: .recipeItem, button: .copyNotes)
-									showToastCopiedNote()
-								} label: {
-									Label("Copy", systemImage: "document.on.clipboard")
-								}
-								.tint(.appleBlue)
-								
+							Button {
+								XPasteboard.general.copyText(recipe.notes)
+								settingsStore.triggerHaptic(&hapticSaved)
+								AnalyticsUtils.logButtonTap(screen: .recipeItem, button: .copyNotes)
+								showToastCopiedNote()
+							} label: {
+								Label("Copy", systemImage: "document.on.clipboard")
 							}
+							.tint(recipe.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .appleGray : .appleBlue)
+							.disabled(recipe.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+						}
+						.contentShape(Rectangle())
+						.onTapGesture {
+							editNotes.toggle()
 						}
 					} label: {
 						Text("Notes")
-							.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-								Button {
-									settingsStore.hideEditTipView()
-									editNotes.toggle()
-								} label: {
-									Label("Edit", systemImage: "pencil")
-								}
-								.tint(.appleOrange)
-							}
 					}
 					
-					LabeledContent {
-						HStack {
-							Text(attachedMealPlansCount(), format: .number)
-							Text("x")
-						}
-					} label: {
-						Text("Used in meal plans")
-					}
+					
+					LabeledContent("Used in meal plans", value: attachedMealPlansCount(), format: .number)
 					
 					Toggle("Favorite", isOn: $recipe.isFavorite)
-					
-				} header: {
-					if settingsStore.hideEditTip == false {
-						Label("Swipe left to edit fields", systemImage: "info.bubble")
-							.font(.footnote)
-					}
 					
 				}
 				
@@ -181,14 +156,9 @@ struct RecipesItem: View {
 								Text("Prep time")
 							}
 						}
-						.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-							Button {
-								settingsStore.hideEditTipView()
-								editPreptime.toggle()
-							} label: {
-								Label("Edit", systemImage: "pencil")
-							}
-							.tint(.appleOrange)
+						.contentShape(Rectangle())
+						.onTapGesture {
+							editPreptime.toggle()
 						}
 						
 						LabeledContent {
@@ -205,14 +175,9 @@ struct RecipesItem: View {
 								Text("Cook time")
 							}
 						}
-						.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-							Button {
-								settingsStore.hideEditTipView()
-								editCooktime.toggle()
-							} label: {
-								Label("Edit", systemImage: "pencil")
-							}
-							.tint(.appleOrange)
+						.contentShape(Rectangle())
+						.onTapGesture {
+							editCooktime.toggle()
 						}
 						
 						LabeledContent {
@@ -229,14 +194,9 @@ struct RecipesItem: View {
 								Text("Servings")
 							}
 						}
-						.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-							Button {
-								settingsStore.hideEditTipView()
-								editServings.toggle()
-							} label: {
-								Label("Edit", systemImage: "pencil")
-							}
-							.tint(.appleOrange)
+						.contentShape(Rectangle())
+						.onTapGesture {
+							editServings.toggle()
 						}
 						
 					} label: {
@@ -246,6 +206,7 @@ struct RecipesItem: View {
 				}
 				
 				Section {
+					
 					DisclosureGroup(isExpanded: $showIngredients) {
 						if recipe.ingredients.isEmpty {
 							
@@ -255,93 +216,30 @@ struct RecipesItem: View {
 						} else {
 							
 							ForEach(recipe.ingredients.sorted(by: { $0.name < $1.name})) { recipeIngredient in
-								if recipeIngredient.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-									
-									LabeledContent {
-										HStack {
-											Text(recipeIngredient.amount, format: .number)
-											Text(recipeIngredient.unit.rawValue)
-										}
-									} label: {
-										HStack {
-											Image(systemName: "circle")
-												.symbolVariant(.fill)
-												.font(.caption)
-												.foregroundStyle(Color.convertStringToColor(recipeIngredient.color).gradient)
-											Text(recipeIngredient.name)
+								LabeledContent {
+									HStack {
+										Text(recipeIngredient.amount, format: .number)
+										Text(recipeIngredient.unit.rawValue)
+									}
+								} label: {
+									HStack {
+										Image(systemName: "circle")
+											.symbolVariant(.fill)
+											.font(.caption)
+											.foregroundStyle(Color.convertStringToColor(recipeIngredient.color).gradient)
+										Text(recipeIngredient.name)
+									}
+								}
+								.contentShape(Rectangle())
+								.onTapGesture {
+									editIngredient = recipeIngredient
+								}
+								.swipeActions(edge: .trailing, allowsFullSwipe: false) {
+									Button(role: .destructive) {
+										withAnimation {
+											recipe.ingredients.removeAll(where: { $0.id == recipeIngredient.id })
 										}
 									}
-									.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-										
-										Button {
-											settingsStore.hideEditTipView()
-											editIngredient = recipeIngredient
-										} label: {
-											Label("Edit", systemImage: "pencil")
-										}
-										.tint(.appleOrange)
-										
-										Button(role: .destructive) {
-											withAnimation {
-												recipe.ingredients.removeAll(where: { $0.id == recipeIngredient.id })
-											}
-										}
-									}
-									
-								} else {
-									
-									DisclosureGroup {
-										Text(recipeIngredient.notes)
-											.foregroundStyle(.secondary)
-											.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-												if !recipeIngredient.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-													
-													Button {
-														XPasteboard.general.copyText(recipeIngredient.notes)
-														settingsStore.triggerHaptic(&hapticSaved)
-														AnalyticsUtils.logButtonTap(screen: .recipeItem, button: .copyNotes)
-														showToastCopiedNote()
-													} label: {
-														Label("Copy", systemImage: "document.on.clipboard")
-													}
-													.tint(.appleBlue)
-													
-												}
-											}
-									} label: {
-										LabeledContent {
-											HStack {
-												Text(recipeIngredient.amount, format: .number)
-												Text(recipeIngredient.unit.rawValue)
-											}
-										} label: {
-											HStack {
-												Image(systemName: "circle")
-													.symbolVariant(.fill)
-													.font(.caption)
-													.foregroundStyle(Color.convertStringToColor(recipeIngredient.color).gradient)
-												Text(recipeIngredient.name)
-											}
-										}
-										.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-											
-											Button {
-												settingsStore.hideEditTipView()
-												editIngredient = recipeIngredient
-											} label: {
-												Label("Edit", systemImage: "pencil")
-											}
-											.tint(.appleOrange)
-											
-											Button(role: .destructive) {
-												withAnimation {
-													recipe.ingredients.removeAll(where: { $0.id == recipeIngredient.id })
-												}
-											}
-										}
-									}
-
-									
 								}
 							}
 							
@@ -411,32 +309,25 @@ struct RecipesItem: View {
 								
 							}
 						}
+						.frame(maxWidth: .infinity, alignment: .leading)
 						.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-							if !recipe.instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-								
-								Button {
-									XPasteboard.general.copyText(recipe.instructions)
-									settingsStore.triggerHaptic(&hapticSaved)
-									AnalyticsUtils.logButtonTap(screen: .recipeItem, button: .copyInstructions)
-									showToastCopiedInstructions()
-								} label: {
-									Label("Copy", systemImage: "document.on.clipboard")
-								}
-								.tint(.appleBlue)
-								
+							Button {
+								XPasteboard.general.copyText(recipe.instructions)
+								settingsStore.triggerHaptic(&hapticSaved)
+								AnalyticsUtils.logButtonTap(screen: .recipeItem, button: .copyInstructions)
+								showToastCopiedInstructions()
+							} label: {
+								Label("Copy", systemImage: "document.on.clipboard")
 							}
+							.tint(recipe.instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .appleGray : .appleBlue)
+							.disabled(recipe.instructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+						}
+						.contentShape(Rectangle())
+						.onTapGesture {
+							editInstructions.toggle()
 						}
 					} label: {
 						Text("Instructions")
-							.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-								Button {
-									settingsStore.hideEditTipView()
-									editInstructions.toggle()
-								} label: {
-									Label("Edit", systemImage: "pencil")
-								}
-								.tint(.appleOrange)
-							}
 					}
 					
 				}
@@ -444,7 +335,7 @@ struct RecipesItem: View {
 			}
 			.navigationTitle("Recipe")
 			.navigationSubtitle("\(recipe.ingredients.count) \(recipe.ingredients.count != 1 ? "ingredients" : "ingredient")")
-//			.navigationBarTitleDisplayMode(.inline)
+			.toolbarTitleDisplayMode(.large)
 			.toastMessage(isActive: $toastCopiedNote, color: .appleBlue, title: "Note Copied", image: "document.on.clipboard")
 			.toastMessage(isActive: $toastCopiedInstructions, color: .appleBlue, title: "Instructions Copied", image: "document.on.clipboard")
 			.scrollDismissesKeyboard(.interactively)
@@ -492,7 +383,7 @@ struct RecipesItem: View {
 							.disabled(editNameValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 						}
 					}
-					.presentationDetents([.medium, .large])
+					.presentationDetents([.large])
 					.interactiveDismissDisabled()
 					.onAppear {
 						editNameValue = recipe.name
@@ -526,7 +417,7 @@ struct RecipesItem: View {
 							}
 						}
 					}
-					.presentationDetents([.medium, .large])
+					.presentationDetents([.large])
 					.interactiveDismissDisabled()
 					.onAppear { editNotesValue = recipe.notes }
 				}
@@ -567,7 +458,7 @@ struct RecipesItem: View {
 							}
 						}
 					}
-					.presentationDetents([.medium, .large])
+					.presentationDetents([.large])
 					.interactiveDismissDisabled()
 					.onAppear {
 						editPreptimeValue = recipe.prepTime
@@ -610,7 +501,7 @@ struct RecipesItem: View {
 							}
 						}
 					}
-					.presentationDetents([.medium, .large])
+					.presentationDetents([.large])
 					.interactiveDismissDisabled()
 					.onAppear {
 						editCooktimeValue = recipe.cookTime
@@ -653,7 +544,7 @@ struct RecipesItem: View {
 							}
 						}
 					}
-					.presentationDetents([.medium, .large])
+					.presentationDetents([.large])
 					.interactiveDismissDisabled()
 					.onAppear {
 						editServingsValue = recipe.servings
@@ -680,19 +571,37 @@ struct RecipesItem: View {
 						
 						Section {
 							
-							LabeledContent {
-								Picker("Unit", selection: $editIngredientUnit) {
-									ForEach(UnitType.allCases, id: \.self) { unit in
-										Text(unit.rawValue.lowercased()).tag(unit)
-									}
+							
+							TextField("unit value", value: $editIngredientUnitValue, formatter: decimalFormatter)
+								.keyboardType(.decimalPad)
+								.multilineTextAlignment(.trailing)
+								.padding(12)
+								.glassEffectStyle()
+							
+							Picker("Unit", selection: $editIngredientUnit) {
+								ForEach(UnitType.allCases, id: \.self) { unit in
+									Text(unit.rawValue.lowercased()).tag(unit)
 								}
-								.tint(.accent)
-								.labelsHidden()
-							} label: {
-								TextField("unit value", value: $editIngredientUnitValue, formatter: decimalFormatter)
-									.keyboardType(.decimalPad)
-									.multilineTextAlignment(.trailing)
 							}
+							.frame(maxWidth: .infinity, alignment: .trailing)
+							.tint(.accent)
+							.labelsHidden()
+							
+//							LabeledContent {
+//								Picker("Unit", selection: $editIngredientUnit) {
+//									ForEach(UnitType.allCases, id: \.self) { unit in
+//										Text(unit.rawValue.lowercased()).tag(unit)
+//									}
+//								}
+//								.tint(.accent)
+//								.labelsHidden()
+//							} label: {
+//								TextField("unit value", value: $editIngredientUnitValue, formatter: decimalFormatter)
+//									.keyboardType(.decimalPad)
+//									.multilineTextAlignment(.trailing)
+//									.padding(9)
+//									.glassEffectStyle()
+//							}
 							
 						}
 						
@@ -737,7 +646,7 @@ struct RecipesItem: View {
 							.disabled(editIngredientNameValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 						}
 					}
-					.presentationDetents([.medium, .large])
+					.presentationDetents([.large])
 					.interactiveDismissDisabled()
 					.onAppear {
 						editIngredientNameValue = editableIngredient.name
@@ -747,10 +656,10 @@ struct RecipesItem: View {
 						editIngredientUnitValue = editableIngredient.amount
 					}
 					
-//					.onAppear {
-//						editNameValue = recipe.name
-//						selectedColor = Color.convertStringToColor(recipe.color)
-//					}
+					//					.onAppear {
+					//						editNameValue = recipe.name
+					//						selectedColor = Color.convertStringToColor(recipe.color)
+					//					}
 					
 					
 				}
@@ -781,7 +690,7 @@ struct RecipesItem: View {
 							}
 						}
 					}
-					.presentationDetents([.medium, .large])
+					.presentationDetents([.large])
 					.interactiveDismissDisabled()
 					.onAppear { editInstructionsValue = recipe.instructions }
 				}
@@ -798,10 +707,10 @@ struct RecipesItem: View {
 					}
 					.confirmationDialog("Delete Recipe?", isPresented: $deleteConfirmationDialog, titleVisibility: .hidden) {
 						Button("Delete Recipe", role: .destructive) {
-							removeRecipe(recipe)
+							deleteRecipe(recipe)
 						}
 					} message: {
-						Text("This recipe and all associated meal plans will be deleted. This action can’t be undone.")
+						Text("This recipe will be removed from your list, but existing meal plans will stay unchanged. This action can’t be undone.")
 					}
 				}
 			}
@@ -857,23 +766,15 @@ extension RecipesItem {
 		}
 		saveLastUpdatedDate()
 	}
-
-	private func removeRecipe(_ recipe: Recipe) {
-		Task {
-			try await Task.sleep(
-				until: .now + .nanoseconds(33),
-				tolerance: .seconds(1),
-				clock: .suspending
-			)
-			deleteRecipe(recipe)
-		}
-	}
 	
 	private func deleteRecipe(_ recipe: Recipe) {
 		
+		AnalyticsUtils.logButtonTap(screen: .recipeItem, button: .delete)
+		settingsStore.triggerHaptic(&hapticDeleted)
 		dismiss()
 		
 		DispatchQueue.main.async {
+			
 			modelContext.delete(recipe)
 			
 			do {
@@ -882,8 +783,6 @@ extension RecipesItem {
 				print("Error removing folder: \(error.localizedDescription)")
 			}
 			
-			settingsStore.triggerHaptic(&hapticDeleted)
-			AnalyticsUtils.logButtonTap(screen: .recipeItem, button: .delete)
 		}
 		
 	}
@@ -913,6 +812,7 @@ extension RecipesItem {
 	
 	// meal plans
 	private func attachedMealPlansCount() -> Int {
-		return mealPlans.filter({ $0.recipe.id == recipe.id }).count
+//		return mealPlans.filter({ $0.recipe.id == recipe.id }).count
+		recipe.mealPlans.count
 	}
 }

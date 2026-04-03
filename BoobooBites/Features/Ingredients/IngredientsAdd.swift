@@ -63,7 +63,7 @@ struct IngredientsAdd: View {
 				
 			}
 			.navigationTitle("New Ingredient")
-			.navigationBarTitleDisplayMode(.inline)
+			.toolbarTitleDisplayMode(.inline)
 			.scrollDismissesKeyboard(.interactively)
 			.toolbar {
 				

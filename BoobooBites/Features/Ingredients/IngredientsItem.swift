@@ -56,14 +56,9 @@ struct IngredientsItem: View {
 						.frame(maxWidth: .infinity, alignment: .trailing)
 						.listRowBackground(Color.convertStringToColor(ingredient.color))
 						.listRowSeparator(.hidden, edges: .bottom)
-						.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-							Button {
-								settingsStore.hideEditTipView()
-								editName.toggle()
-							} label: {
-								Label("Edit", systemImage: "pencil")
-							}
-							.tint(.appleOrange)
+						.contentShape(Rectangle())
+						.onTapGesture {
+							editName.toggle()
 						}
 					
 					DisclosureGroup(isExpanded: $showNotes) {
@@ -79,39 +74,29 @@ struct IngredientsItem: View {
 								
 							}
 						}
+						.frame(maxWidth: .infinity, alignment: .leading)
 						.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-							if !ingredient.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-								
-								Button {
-									XPasteboard.general.copyText(ingredient.notes)
-									settingsStore.triggerHaptic(&hapticSaved)
-									AnalyticsUtils.logButtonTap(screen: .ingredientItem, button: .copyNotes)
-									showToastCopiedNote()
-								} label: {
-									Label("Copy", systemImage: "document.on.clipboard")
-								}
-								.tint(.appleBlue)
-								
+							
+							Button {
+								XPasteboard.general.copyText(ingredient.notes)
+								settingsStore.triggerHaptic(&hapticSaved)
+								AnalyticsUtils.logButtonTap(screen: .ingredientItem, button: .copyNotes)
+								showToastCopiedNote()
+							} label: {
+								Label("Copy", systemImage: "document.on.clipboard")
 							}
+							.tint(ingredient.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .appleGray : .appleBlue)
+							.disabled(ingredient.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+							
+						}
+						.contentShape(Rectangle())
+						.onTapGesture {
+							editNotes.toggle()
 						}
 					} label: {
 						Text("Notes")
-							.swipeActions(edge: .trailing, allowsFullSwipe: true) {
-								Button {
-									settingsStore.hideEditTipView()
-									editNotes.toggle()
-								} label: {
-									Label("Edit", systemImage: "pencil")
-								}
-								.tint(.appleOrange)
-							}
 					}
 					
-				} header: {
-					if settingsStore.hideEditTip == false {
-						Label("Swipe left to edit fields", systemImage: "info.bubble")
-							.font(.footnote)
-					}
 				}
 				
 				Section {
@@ -127,7 +112,7 @@ struct IngredientsItem: View {
 				
 			}
 			.navigationTitle("Ingredient")
-			.navigationBarTitleDisplayMode(.inline)
+			.toolbarTitleDisplayMode(.large)
 			.toastMessage(isActive: $toastCopiedNote, color: .appleBlue, title: "Note Copied", image: "document.on.clipboard")
 			.scrollDismissesKeyboard(.interactively)
 			.sheet(isPresented: $editName) {
@@ -166,7 +151,7 @@ struct IngredientsItem: View {
 					}, message: {
 						Text("Some recipes use this ingredient, do you want to rename the ingredient in those recipes as well?")
 					})
-					.presentationDetents([.medium, .large])
+					.presentationDetents([.large])
 					.interactiveDismissDisabled()
 					.onAppear {
 						editNameValue = ingredient.name
@@ -196,7 +181,7 @@ struct IngredientsItem: View {
 							}
 						}
 					}
-					.presentationDetents([.medium, .large])
+					.presentationDetents([.large])
 					.interactiveDismissDisabled()
 					.onAppear { editNotesValue = ingredient.notes }
 				}
@@ -213,7 +198,7 @@ struct IngredientsItem: View {
 					}
 					.confirmationDialog("Delete Ingredient?", isPresented: $deleteConfirmationDialog, titleVisibility: .hidden) {
 						Button("Delete Ingredient", role: .destructive) {
-							removeIngredient(ingredient)
+							deleteIngredient(ingredient)
 						}
 					} message: {
 						Text("This ingredient will be removed from your list, but existing recipes will stay unchanged. This action can’t be undone.")
@@ -281,22 +266,14 @@ extension IngredientsItem {
 	}
 	
 	// delete
-	private func removeIngredient(_ ingredient: Ingredient) {
-		Task {
-			try await Task.sleep(
-				until: .now + .nanoseconds(33),
-				tolerance: .seconds(1),
-				clock: .suspending
-			)
-			deleteIngredient(ingredient)
-		}
-	}
-	
 	private func deleteIngredient(_ ingredient: Ingredient) {
 		
+		AnalyticsUtils.logButtonTap(screen: .ingredientItem, button: .delete)
+		settingsStore.triggerHaptic(&hapticDeleted)
 		dismiss()
 		
 		DispatchQueue.main.async {
+			
 			modelContext.delete(ingredient)
 			
 			recipeIngredientsToUpdate().forEach { recipeIngredient in
@@ -306,11 +283,9 @@ extension IngredientsItem {
 			do {
 				try modelContext.save()
 			} catch {
-				print("Error removing folder: \(error.localizedDescription)")
+				print("Error removing ingredient: \(error.localizedDescription)")
 			}
 			
-			settingsStore.triggerHaptic(&hapticDeleted)
-			AnalyticsUtils.logButtonTap(screen: .ingredientItem, button: .delete)
 		}
 		
 	}

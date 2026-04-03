@@ -41,6 +41,16 @@ final class SettingsStore {
 		}
 	}
 	
+	// meal planner screen type
+	@ObservationIgnored
+	@AppStorage("mealPlannerRootScreenType") private var persistedMealPlannerRootScreenType: MealPlannerRootType = .month
+	
+	var mealPlannerRootScreenType: MealPlannerRootType = .month {
+		didSet {
+			persistedMealPlannerRootScreenType = mealPlannerRootScreenType
+		}
+	}
+	
 	// recipe list sort type
 	@ObservationIgnored
 	@AppStorage("recipesListSortType") private var persistedRecipesListSortType: RecipesListSortType = .name
@@ -73,15 +83,6 @@ final class SettingsStore {
 	
 	// tooltips
 	@ObservationIgnored
-	@AppStorage("hideEditTip") private var persistedHideEditTip: Bool = false
-	
-	var hideEditTip: Bool = false {
-		didSet {
-			persistedHideEditTip = hideEditTip
-		}
-	}
-	
-	@ObservationIgnored
 	@AppStorage("hideSwipeMonthsTip") private var persistedHideSwipeMonthsTip: Bool = false
 	
 	var hideSwipeMonthsTip: Bool = false {
@@ -96,6 +97,7 @@ final class SettingsStore {
 		
 		enableHaptics = persistedEnableHaptics
 		
+		mealPlannerRootScreenType = persistedMealPlannerRootScreenType
 		defaultMealPlanType = persistedDefaultMealPlanType
 		
 		recipesListSortType = persistedRecipesListSortType
@@ -103,7 +105,6 @@ final class SettingsStore {
 		
 		ingredientsListSortType = persistedIngredientsListSortType
 		
-		hideEditTip = persistedHideEditTip
 		hideSwipeMonthsTip = persistedHideSwipeMonthsTip
 	}
 }
@@ -113,7 +114,6 @@ extension SettingsStore {
 	
 	func resetOnboarding() {
 		onboardingState = .welcome
-		hideEditTip = false
 		hideSwipeMonthsTip = false
 	}
 	
@@ -177,16 +177,19 @@ extension SettingsStore {
 	}
 }
 
-// MARK: - tooltips
+// MARK: - meal planner root
 extension SettingsStore {
 	
-	func hideEditTipView() {
-		if hideEditTip == false {
-			withAnimation {
-				hideEditTip = true
-			}
+	func setRootScreenTo(_ screenType: MealPlannerRootType) {
+		withAnimation {
+			mealPlannerRootScreenType = screenType
 		}
 	}
+	
+}
+
+// MARK: - tooltips
+extension SettingsStore {
 	
 	func hideSwipeMonthsTipView() {
 		if hideSwipeMonthsTip == false {

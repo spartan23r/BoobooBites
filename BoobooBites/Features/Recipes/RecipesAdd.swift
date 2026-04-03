@@ -123,85 +123,18 @@ struct RecipesAdd: View {
 				
 				Section {
 					
-//					ScrollView(.horizontal) {
-//						
-//						let selectedIDs = Set(ingredients.map { $0.ingredient.id })
-//						
-//						let availableIngredients = storedIngredients.filter {
-//							!selectedIDs.contains($0.id)
-//						}
-//						
-//						HStack {
-//							ForEach(availableIngredients, id: \.id) { ingredient in
-//								Button(ingredient.name) {
-//									withAnimation {
-//										ingredients.append(RecipeIngredient(ingredient: ingredient, unit: ingredient.defaultUnit))
-//									}
-//								}
-//								.font(.callout)
-//								.tint(Color.convertStringToColor(ingredient.color).gradient)
-//								.padding(.vertical, 3)
-//								.padding(.horizontal, 6)
-//								.glassEffectStyle(color: Color.convertStringToColor(ingredient.color).opacity(0.2))
-//								.scrollTransition { effect, phase in
-//									effect
-//										.opacity(phase.isIdentity ? 1 : 0.8)
-//										.blur(radius: phase.isIdentity ? 0 : 0.6)
-//								}
-//								
-//							}
-//						}
-//						
-//						if storedIngredients.isEmpty || availableIngredients.isEmpty {
-//							
-//							Text("No stored ingredients available")
-//								.foregroundStyle(.secondary)
-//							
-//						}
-//						
-//					}
-//					.scrollClipDisabled()
-//					.scrollIndicators(.hidden)
-					
-//					Button {
-//						addStoredIngredient.toggle()
-//					} label: {
-//						
-//						LabeledContent {
-//							HStack(spacing: 3) {
-//								Text("\(availableIngredients.count)")
-//									.contentTransition(.numericText())
-//									.foregroundStyle(.sonicRed)
-//									.font(.caption2)
-////									.bold()
-//									.padding(.vertical, 3)
-//									.padding(.horizontal, 6)
-//									.glassEffectStyle(color: .sonicRed.opacity(0.2))
-//								Image(systemName: "chevron.right")
-//									.font(.caption)
-//									.foregroundStyle(.accent)
-//							}
-//						} label: {
-//							HStack {
-//								Image(systemName: "circle")
-//									.symbolVariant(.fill)
-//									.font(.caption)
-//									.foregroundStyle(.sonicRed.gradient)
-//								Text("Stored")
-//							}
-//						}
-//						.contentShape(Rectangle())
-//						
-//					}
-//					.buttonStyle(.plain)
-//					.disabled(availableIngredients.isEmpty)
-					
-					// MARK: - SHOW ADDED INGREDIENTS HERE
 					if ingredients.count > 0 {
 						ForEach(ingredients.indices.sorted { ingredients[$0].name < ingredients[$1].name }, id: \.self ) { index in
-								
-							VStack(alignment: .leading, spacing: 3) {
-								
+							
+							LabeledContent {
+								Picker("Unit", selection: $ingredients[index].unit) {
+									ForEach(UnitType.allCases, id: \.self) { unit in
+										Text(unit.rawValue.lowercased()).tag(unit)
+									}
+								}
+								.tint(.accent)
+								.labelsHidden()
+							} label: {
 								HStack {
 									Image(systemName: "circle")
 										.symbolVariant(.fill)
@@ -209,23 +142,9 @@ struct RecipesAdd: View {
 										.foregroundStyle(Color.convertStringToColor(ingredients[index].color).gradient)
 									Text(ingredients[index].name)
 								}
-								
-								LabeledContent {
-									Picker("Unit", selection: $ingredients[index].unit) {
-										ForEach(UnitType.allCases, id: \.self) { unit in
-											Text(unit.rawValue.lowercased()).tag(unit)
-										}
-									}
-									.tint(.accent)
-									.labelsHidden()
-									.contentShape(Rectangle())
-								} label: {
-									TextField("unit value", value: $ingredients[index].amount, formatter: decimalFormatter)
-										.keyboardType(.decimalPad)
-										.multilineTextAlignment(.trailing)
-								}
-								
 							}
+							.listRowSeparator(.hidden)
+							.listRowSpacing(0)
 							.swipeActions(edge: .trailing, allowsFullSwipe: false) {
 								Button(role: .destructive) {
 									withAnimation {
@@ -234,35 +153,13 @@ struct RecipesAdd: View {
 								}
 							}
 							
-//							HStack {
-//								Image(systemName: "circle")
-//									.symbolVariant(.fill)
-//									.font(.caption)
-//									.foregroundStyle(Color.convertStringToColor(ingredients[index].ingredient.color).gradient)
-//								Text(ingredients[index].ingredient.name)
-//							}
-//							.swipeActions(edge: .trailing, allowsFullSwipe: false) {
-//								Button(role: .destructive) {
-//									withAnimation {
-//										ingredients.removeAll(where: { $0.id == ingredients[index].id })
-//									}
-//								}
-//							}
-//							.listRowSeparator(.hidden, edges: .bottom)
-//							
-//							LabeledContent {
-//								Picker("Unit", selection: $ingredients[index].unit) {
-//									ForEach(UnitType.allCases, id: \.self) { unit in
-//										Text(unit.rawValue.lowercased()).tag(unit)
-//									}
-//								}
-//								.tint(.accent)
-//								.labelsHidden()
-//							} label: {
-//								TextField("unit value", value: $ingredients[index].amount, formatter: numberFormatter)
-//									.keyboardType(.numberPad)
-//									.multilineTextAlignment(.trailing)
-//							}
+							TextField("unit value", value: $ingredients[index].amount, formatter: decimalFormatter)
+								.keyboardType(.decimalPad)
+								.multilineTextAlignment(.trailing)
+								.padding(12)
+								.glassEffectStyle()
+								.listRowInsets(.init(top: 0, leading: 9, bottom: 9, trailing: 9))
+								.listRowSeparator(ingredients[index].id == ingredients.sorted { $0.name < $1.name }.last?.id ? .hidden : .visible)
 							
 						}
 					}
@@ -324,7 +221,7 @@ struct RecipesAdd: View {
 				
 			}
 			.navigationTitle("New Recipe")
-			.navigationBarTitleDisplayMode(.inline)
+			.toolbarTitleDisplayMode(.inline)
 			.scrollDismissesKeyboard(.interactively)
 			.sheet(isPresented: $newIngredient) {
 				IngredientsAdd(isPresented: $newIngredient) { ingredient in

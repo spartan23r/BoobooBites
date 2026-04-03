@@ -11,8 +11,6 @@ import SwiftData
 struct MealPlannerRoot: View {
 	
 	// MARK: - properties
-	@AppStorage("mealPlannerRootScreenType") private var screenType: MealPlannerRootType = .month
-	
 	@Environment(SettingsStore.self) private var settingsStore
 	
 	@Environment(\.modelContext) private var modelContext
@@ -30,8 +28,6 @@ struct MealPlannerRoot: View {
 	
 	@State private var newMealPlan = false
 	
-	@State private var showRecipeUsage = false
-	
 	@State private var showPaywall = false
 	
 	@State private var deleteConfirmationDialog = false
@@ -45,7 +41,7 @@ struct MealPlannerRoot: View {
     var body: some View {
 		NavigationStack {
 			Group {
-				switch screenType {
+				switch settingsStore.mealPlannerRootScreenType {
 				case .month:
 					
 					MealPlannerCalendar(
@@ -56,7 +52,10 @@ struct MealPlannerRoot: View {
 						selectedDate: $selectedDate,
 						hapticSelection: $hapticSelection,
 						newMealPlan: $newMealPlan,
-						showPaywall: $showPaywall
+						showPaywall: $showPaywall,
+						deleteMealPlan: { mealPlan in
+							deleteMealPlan(mealPlan)
+						}
 					)
 					
 				case .week:
@@ -66,7 +65,10 @@ struct MealPlannerRoot: View {
 						calendar: calendar,
 						selectedWeekDate: $selectedWeekDate,
 						newMealPlan: $newMealPlan,
-						showPaywall: $showPaywall
+						showPaywall: $showPaywall,
+						deleteMealPlan: { mealPlan in
+							deleteMealPlan(mealPlan)
+						}
 					)
 					
 				case .list:
@@ -75,15 +77,18 @@ struct MealPlannerRoot: View {
 						upcomingMealPlans: upcomingMealPlans,
 						pastMealPlans: pastMealPlans,
 						newMealPlan: $newMealPlan,
-						showPaywall: $showPaywall
+						showPaywall: $showPaywall,
+						deleteMealPlan: { mealPlan in
+							deleteMealPlan(mealPlan)
+						}
 					)
 					
 				}
 			}
-			.navigationBarTitleDisplayMode(.inline)
+			.toolbarTitleDisplayMode(.inline)
 			.toolbar {
 				
-				if screenType == .week {
+				if settingsStore.mealPlannerRootScreenType == .week {
 					ToolbarItemGroup(placement: .topBarLeading) {
 						Button {
 							goToPreviousWeek()
@@ -98,7 +103,7 @@ struct MealPlannerRoot: View {
 					}
 				}
 				
-				if screenType == .month {
+				if settingsStore.mealPlannerRootScreenType == .month {
 					ToolbarItem(placement: .primaryAction) {
 						Button("Today") {
 							goToToday()
@@ -111,7 +116,7 @@ struct MealPlannerRoot: View {
 					ToolbarSpacer(.fixed, placement: .primaryAction)
 				}
 				
-				if screenType == .week {
+				if settingsStore.mealPlannerRootScreenType == .week {
 					ToolbarItem(placement: .primaryAction) {
 						Button("This Week") {
 							goToThisWeek()
@@ -124,19 +129,30 @@ struct MealPlannerRoot: View {
 					ToolbarSpacer(.fixed, placement: .primaryAction)
 				}
 				
-				if screenType == .list {
-					ToolbarItem(placement: .primaryAction) {
-						Button {
-							showRecipeUsage.toggle()
-						} label: {
-							Image(systemName: "chart.bar")
-						}
-					}
-					
-					ToolbarSpacer(.fixed, placement: .primaryAction)
-				}
-				
 				ToolbarItemGroup(placement: .primaryAction) {
+					
+//					Menu {
+//						
+//						Button("Delete All Past Meal Plans", systemImage: "trash", role: .destructive) {
+//							deleteConfirmationDialog.toggle()
+//							settingsStore.triggerHaptic(&hapticWarning)
+//						}
+//						.disabled(pastMealPlans.isEmpty)
+//						
+//					} label: {
+//						Image(systemName: "ellipsis")
+//					}
+//					.confirmationDialog("Delete All Past Meal Plans?", isPresented: $deleteConfirmationDialog, titleVisibility: .hidden) {
+//						if pastMealPlans.isEmpty {
+//							Button(role: .close) {}
+//						} else {
+//							Button("Delete All Past Meal Plans", role: .destructive) {
+//								deleteAllMealPlans()
+//							}
+//						}
+//					} message: {
+//						Text("All past meal plans will be deleted. This action can’t be undone.")
+//					}
 					
 					ControlGroup {
 						
@@ -145,21 +161,21 @@ struct MealPlannerRoot: View {
 						} label: {
 							Label(MealPlannerRootType.month.title, systemImage: MealPlannerRootType.month.image)
 						}
-						.tint(screenType == .month ? .accent : .primary)
+						.tint(settingsStore.mealPlannerRootScreenType == .month ? .accent : .primary)
 						
 						Button {
 							switchScreenType(to: .week)
 						} label: {
 							Label(MealPlannerRootType.week.title, systemImage: MealPlannerRootType.week.image)
 						}
-						.tint(screenType == .week ? .accent : .primary)
+						.tint(settingsStore.mealPlannerRootScreenType == .week ? .accent : .primary)
 						
 						Button {
 							switchScreenType(to: .list)
 						} label: {
 							Label(MealPlannerRootType.list.title, systemImage: MealPlannerRootType.list.image)
 						}
-						.tint(screenType == .list ? .accent : .primary)
+						.tint(settingsStore.mealPlannerRootScreenType == .list ? .accent : .primary)
 						
 //						Divider()
 //						
@@ -176,7 +192,7 @@ struct MealPlannerRoot: View {
 //						}
 						
 					} label: {
-						Image(systemName: screenType.image)
+						Image(systemName: settingsStore.mealPlannerRootScreenType.image)
 						
 					}
 					.controlGroupStyle(.menu)
@@ -199,12 +215,9 @@ struct MealPlannerRoot: View {
 			}
 			.sheet(isPresented: $newMealPlan) {
 				MealPlannerAdd(isPresented: $newMealPlan, selectedDate: $selectedDate) {
-					if screenType == .list { goToToday() }
-					if screenType == .week { goToThisWeekday() }
+					if settingsStore.mealPlannerRootScreenType == .list { goToToday() }
+					if settingsStore.mealPlannerRootScreenType == .week { goToThisWeekday() }
 				}
-			}
-			.sheet(isPresented: $showRecipeUsage) {
-				MealPlannerRecipeUsage(isPresented: $showRecipeUsage)
 			}
 			.showPaywall(showPaywallMessage: $showPaywall, paywallMessage: .mealplans)
 			.sensoryFeedback(.warning, trigger: hapticWarning)
@@ -236,13 +249,13 @@ extension MealPlannerRoot {
 		withAnimation {
 			switch type {
 			case .month:
-				screenType = .month
+				settingsStore.mealPlannerRootScreenType = .month
 				goToToday()
 			case .week:
-				screenType = .week
+				settingsStore.mealPlannerRootScreenType = .week
 				goToThisWeek()
 			case .list:
-				screenType = .list
+				settingsStore.mealPlannerRootScreenType = .list
 				goToToday()
 			}
 		}
@@ -317,4 +330,42 @@ extension MealPlannerRoot {
 				return lhsDay > rhsDay
 			}
 	}
+	
+	// delete
+	private func deleteMealPlan(_ mealPlan: MealPlan) {
+		
+		AnalyticsUtils.logButtonTap(screen: .mealPlanItem, button: .delete)
+		settingsStore.triggerHaptic(&hapticDeleted)
+		
+		DispatchQueue.main.async {
+			
+			modelContext.delete(mealPlan)
+			
+			do {
+				try modelContext.save()
+			} catch {
+				print("Error removing meal plan: \(error.localizedDescription)")
+			}
+			
+		}
+		
+	}
+//	private func deleteAllMealPlans() {
+//		
+//		settingsStore.triggerHaptic(&hapticDeleted)
+//		
+//		DispatchQueue.main.async {
+//			pastMealPlans.forEach { mealPlan in
+//				modelContext.delete(mealPlan)
+//			}
+//			
+//			do {
+//				try modelContext.save()
+//			} catch {
+//				print("Error removing meal plans: \(error.localizedDescription)")
+//			}
+//			
+//		}
+//		
+//	}
 }

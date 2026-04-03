@@ -19,6 +19,8 @@ struct RecipesList: View {
 	
 	@State private var showIngredientsList = false
 	
+	@State private var showRecipeUsage = false
+	
 	@State private var showSettings = false
 	
 	@State private var showPaywall = false
@@ -34,11 +36,16 @@ struct RecipesList: View {
 			}
 			.navigationTitle("Recipes")
 			.navigationSubtitle("\(recipes.count) stored")
+			.toolbarTitleDisplayMode(.large)
 			.sheet(isPresented: $newRecipe) {
 				RecipesAdd(isPresented: $newRecipe)
 			}
 			.sheet(isPresented: $showIngredientsList) {
 				IngredientsList(isPresented: $showIngredientsList)
+			}
+			
+			.sheet(isPresented: $showRecipeUsage) {
+				RecipesUsage(isPresented: $showRecipeUsage)
 			}
 			.sheet(isPresented: $showSettings) {
 				SettingsList(isPresented: $showSettings)
@@ -118,6 +125,14 @@ struct RecipesList: View {
 					Menu {
 						
 						Button {
+							showRecipeUsage.toggle()
+						} label: {
+							Label("Most Used Recipes", systemImage: "chart.pie")
+						}
+						
+						Divider()
+						
+						Button {
 							showSettings.toggle()
 						} label: {
 							Label("Settings", systemImage: "gear")
@@ -158,7 +173,7 @@ struct RecipesList: View {
 						.buttonStyle(.glassProminent)
 						
 						// DEV ONLY
-						addMockDataButton
+//						addMockDataButton
 						
 					}
 					

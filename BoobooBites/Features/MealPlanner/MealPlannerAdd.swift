@@ -55,7 +55,7 @@ struct MealPlannerAdd: View {
 				
 			}
 			.navigationTitle("New Meal Plan")
-			.navigationBarTitleDisplayMode(.inline)
+			.toolbarTitleDisplayMode(.inline)
 			.toolbar {
 				
 				ToolbarItem(placement: .topBarLeading) {

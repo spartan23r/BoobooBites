@@ -37,11 +37,11 @@ struct SettingsList: View {
 				
 				generalSection
 				feedbackSection
-				resetOnboardingSection // DEV ONLY
+//				resetOnboardingSection // DEV ONLY
 				otherAppsSection
 			}
 			.navigationTitle("Settings")
-			.navigationBarTitleDisplayMode(.inline)
+			.toolbarTitleDisplayMode(.large)
 			.toolbar {
 				ToolbarItem(placement: .topBarLeading) {
 					Button(role: .close) {
@@ -69,18 +69,9 @@ extension SettingsList {
 		return mealPlans.filter { $0.date.startOfDay < today }
 	}
 	
-	private func removeAllMealPlans() {
-		Task {
-			try await Task.sleep(
-				until: .now + .nanoseconds(33),
-				tolerance: .seconds(1),
-				clock: .suspending
-			)
-			deleteAllMealPlans()
-		}
-	}
-	
 	private func deleteAllMealPlans() {
+		
+		settingsStore.triggerHaptic(&hapticDeleted)
 		
 		DispatchQueue.main.async {
 			pastMealPlans.forEach { mealPlan in
@@ -90,10 +81,9 @@ extension SettingsList {
 			do {
 				try modelContext.save()
 			} catch {
-				print("Error removing folder: \(error.localizedDescription)")
+				print("Error removing meal plans: \(error.localizedDescription)")
 			}
 			
-			settingsStore.triggerHaptic(&hapticDeleted)
 		}
 		
 	}
@@ -189,7 +179,7 @@ extension SettingsList {
 				Button(role: .close) {}
 			} else {
 				Button("Delete All Past Meal Plans", role: .destructive) {
-					removeAllMealPlans()
+					deleteAllMealPlans()
 				}
 			}
 		} message: {

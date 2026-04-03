@@ -25,7 +25,7 @@ struct MealPlanDescriptionView: View {
 			
 			HStack(alignment: .center, spacing: 6) {
 				
-				Text(mealPlan.recipe.name)
+				Text(mealPlan.recipe?.name ?? mealPlan.recipeName)
 					.font(.subheadline)
 					.bold()
 					.multilineTextAlignment(.leading)

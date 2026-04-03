@@ -29,6 +29,8 @@ struct MealPlannerCalendar: View {
 	
 	@Binding var showPaywall: Bool
 	
+	let deleteMealPlan: (MealPlan) -> Void
+	
 	// MARK: - body
 	var body: some View {
 		VStack {
@@ -40,12 +42,13 @@ struct MealPlannerCalendar: View {
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.background(.offWhite)
 		.navigationTitle(currentMonth.formatted(.dateTime.month(.wide).year()))
-		.navigationSubtitle("Selected: \(selectedDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year()))")
+		.navigationSubtitle("▶ \(selectedDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated).year()))")
+		.toolbarTitleDisplayMode(.inline)
 	}
 }
 
 #Preview {
-	MealPlannerCalendar(mealPlans: [], calendar: AppCalendar.shared, today: Date().startOfDay, currentMonth: .constant(Date()), selectedDate: .constant(Date()), hapticSelection: .constant(false), newMealPlan: .constant(false), showPaywall: .constant(false))
+	MealPlannerCalendar(mealPlans: [], calendar: AppCalendar.shared, today: Date().startOfDay, currentMonth: .constant(Date()), selectedDate: .constant(Date()), hapticSelection: .constant(false), newMealPlan: .constant(false), showPaywall: .constant(false), deleteMealPlan: { _ in })
 }
 
 // MARK: - utilities
@@ -236,7 +239,9 @@ extension MealPlannerCalendar {
 				}	
 			} else {
 				ForEach(selectedDateMealPlans, id: \.self) { mealPlan in
-					MealPlanCardView(mealPlan: mealPlan)
+					MealPlanCardView(mealPlan: mealPlan) { mealPlan in
+						deleteMealPlan(mealPlan)
+				 }
 				}
 			}
 		}

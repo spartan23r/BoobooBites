@@ -38,6 +38,7 @@ struct IngredientsList: View {
 			}
 			.navigationTitle("Ingredients")
 			.navigationSubtitle("\(ingredients.count) stored")
+			.toolbarTitleDisplayMode(.large)
 			.sheet(isPresented: $newIngredient) {
 				IngredientsAdd(isPresented: $newIngredient) { _ in }
 			}
@@ -93,7 +94,7 @@ struct IngredientsList: View {
 					}
 					.confirmationDialog("Delete All Ingredients?", isPresented: $deleteConfirmationDialog, titleVisibility: .hidden) {
 						Button("Delete All Ingredients", role: .destructive) {
-							removeAllIngredients()
+							deleteAllIngredients()
 						}
 					} message: {
 						Text("All ingredients will be removed from your list, but existing recipes will stay unchanged. This action can’t be undone.")
@@ -163,32 +164,25 @@ extension IngredientsList {
 		return ingredientsList
 	}
 	
-	private func removeAllIngredients() {
-		Task {
-			try await Task.sleep(
-				until: .now + .nanoseconds(33),
-				tolerance: .seconds(1),
-				clock: .suspending
-			)
-			deleteAllIngredients()
-		}
-	}
-	
 	private func deleteAllIngredients() {
+		
+		AnalyticsUtils.logButtonTap(screen: .ingredientList, button: .deleteAll)
+		settingsStore.triggerHaptic(&hapticDeleted)
+		
 		DispatchQueue.main.async {
+			
 			ingredients.forEach { ingredient in
 				modelContext.delete(ingredient)
 			}
+			
 			clearRecipeIngredientsSourceIngredientID()
 			
 			do {
 				try modelContext.save()
 			} catch {
-				print("Error removing folder: \(error.localizedDescription)")
+				print("Error removing ingredients: \(error.localizedDescription)")
 			}
 			
-			settingsStore.triggerHaptic(&hapticDeleted)
-			AnalyticsUtils.logButtonTap(screen: .ingredientList, button: .deleteAll)
 		}
 	}
 	

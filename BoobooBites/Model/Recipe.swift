@@ -25,7 +25,7 @@ final class Recipe: Identifiable {
 	
 	var ingredients: [RecipeIngredient]
 	
-	@Relationship(deleteRule: .cascade, inverse: \MealPlan.recipe) var mealPlans: [MealPlan] = []
+	@Relationship(deleteRule: .nullify, inverse: \MealPlan.recipe) var mealPlans: [MealPlan] = []
 	
 	init(id: UUID = UUID(), name: String = String(), notes: String = String(), color: String = "appleRed", isFavorite: Bool = false, instructions: String = String(), prepTime: Int = 0, cookTime: Int = 0, servings: Int = 1, createdAt: Date = Date(), lastUpdated: Date = Date(), ingredients: [RecipeIngredient]) {
 		self.id = id

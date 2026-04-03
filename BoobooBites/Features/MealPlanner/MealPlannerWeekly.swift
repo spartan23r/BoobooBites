@@ -23,6 +23,8 @@ struct MealPlannerWeekly: View {
 	
 	@Binding var showPaywall: Bool
 	
+	let deleteMealPlan: (MealPlan) -> Void
+	
 	// MARK: - body
 	var body: some View {
 		Form {
@@ -49,7 +51,7 @@ struct MealPlannerWeekly: View {
 }
 
 #Preview {
-	MealPlannerWeekly(mealPlans: [], calendar: AppCalendar.shared, selectedWeekDate: .constant(Date()), newMealPlan: .constant(false), showPaywall: .constant(false))
+	MealPlannerWeekly(mealPlans: [], calendar: AppCalendar.shared, selectedWeekDate: .constant(Date()), newMealPlan: .constant(false), showPaywall: .constant(false), deleteMealPlan: { _ in })
 }
 
 // MARK: - utilities
@@ -123,7 +125,9 @@ extension MealPlannerWeekly {
 			}
 		} else {
 			ForEach(mealPlansForSelectedWeek, id: \.self) { mealPlan in
-				MealPlanCardView(mealPlan: mealPlan, showDate: true)
+				MealPlanCardView(mealPlan: mealPlan, showDate: true) { mealPlan in
+					deleteMealPlan(mealPlan)
+				}
 			}
 		}
 	}

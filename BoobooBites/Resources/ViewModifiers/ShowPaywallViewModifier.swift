@@ -30,7 +30,7 @@ private struct ShowPaywallViewModifier: ViewModifier, ShowPaywall {
 			}
 			.alert(paywallMessage.title, isPresented: $showPaywallMessage, actions: {
 				Button("Not now", role: .cancel) {}
-				Button("Get Booboo Bites +", role: .confirm) { showPaywall.toggle() }
+				Button("Upgrade to Booboo Bites +", role: .confirm) { showPaywall.toggle() }
 					.keyboardShortcut(.defaultAction)
 			}, message: {
 				Text(paywallMessage.description)

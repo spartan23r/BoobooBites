@@ -21,6 +21,8 @@ struct MealPlannerList: View {
 	
 	@Binding var showPaywall: Bool
 	
+	let deleteMealPlan: (MealPlan) -> Void
+	
 	// MARK: - body
 	var body: some View {
 		Form {
@@ -40,7 +42,9 @@ struct MealPlannerList: View {
 						}
 					} else {
 						ForEach(upcomingMealPlans) { mealPlan in
-							MealPlanCardView(mealPlan: mealPlan, showDate: true)
+							MealPlanCardView(mealPlan: mealPlan, showDate: true) { mealPlan in
+								deleteMealPlan(mealPlan)
+				   }
 						}
 					}
 				}
@@ -76,7 +80,9 @@ struct MealPlannerList: View {
 							.foregroundStyle(.secondary)
 					} else {
 						ForEach(pastMealPlans) { mealPlan in
-							MealPlanCardView(mealPlan: mealPlan, showDate: true)
+							MealPlanCardView(mealPlan: mealPlan, showDate: true) { mealPlan in
+								deleteMealPlan(mealPlan)
+				   }
 						}
 					}
 				}
@@ -108,11 +114,12 @@ struct MealPlannerList: View {
 		}
 		.navigationTitle("Meal Planner")
 		.navigationSubtitle("\(upcomingMealPlans.count) upcoming")
+		.toolbarTitleDisplayMode(.large)
 	}
 }
 
 #Preview {
-	MealPlannerList(upcomingMealPlans: [], pastMealPlans: [], newMealPlan: .constant(false), showPaywall: .constant(false))
+	MealPlannerList(upcomingMealPlans: [], pastMealPlans: [], newMealPlan: .constant(false), showPaywall: .constant(false), deleteMealPlan: { _ in })
 }
 
 // MARK: - utilities

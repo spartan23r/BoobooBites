@@ -13,6 +13,8 @@ struct MealPlanCardView: View {
 	let mealPlan: MealPlan
 	var showDate = false
 	
+	let deleteMealPlan: (MealPlan) -> Void
+	
 	// MARK: - body
 	var body: some View {
 		NavigationLink {
@@ -27,11 +29,16 @@ struct MealPlanCardView: View {
 			}
 			
 		}
+		.swipeActions(edge: .trailing, allowsFullSwipe: false) {
+			Button(role: .destructive) {
+				deleteMealPlan(mealPlan)
+			}
+		}
 	}
 }
 
 #Preview {
-	MealPlanCardView(mealPlan: MealPlan(recipe: Recipe(name: "Curry", ingredients: [])))
+	MealPlanCardView(mealPlan: MealPlan(recipe: Recipe(name: "Curry", ingredients: [])), deleteMealPlan: { _ in })
 }
 
 // MARK: - utilities
