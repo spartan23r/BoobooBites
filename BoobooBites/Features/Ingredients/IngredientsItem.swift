@@ -101,7 +101,7 @@ struct IngredientsItem: View {
 				
 				Section {
 					
-					Picker("Default unit", selection: $ingredient.defaultUnit) {
+					Picker("Unit", selection: $ingredient.defaultUnit) {
 						ForEach(UnitType.allCases, id: \.self) { unit in
 							Text(unit.rawValue.lowercased()).tag(unit)
 						}

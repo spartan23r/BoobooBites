@@ -13,6 +13,8 @@ struct IngredientsAdd: View {
 	// MARK: - properties
 	@Binding var isPresented: Bool
 	
+	var fromRecipeScreen = false
+	
 	@Environment(SettingsStore.self) private var settingsStore
 	
 	@Environment(\.modelContext) private var modelContext
@@ -25,42 +27,26 @@ struct IngredientsAdd: View {
 	@State private var selectedColor: Color = .appleRed
 	
 	@State private var selectedDefaultUnit: UnitType = .grams
+	@State private var unitValue: Double = 100
 	
-	let completion: (Ingredient) -> Void
+	let completion: (RecipeIngredient) -> Void
 	
 	@State private var hapticSaved = false
+	
+	let decimalFormatter: NumberFormatter = {
+		let formatter = NumberFormatter()
+		formatter.numberStyle = .decimal
+		return formatter
+	}()
 	
 	// MARK: - body
     var body: some View {
 		NavigationStack {
 			Form {
-				
-				Section {
-					
-					TextField("Name", text: $name)
-						.keyboardType(.default)
-						.bold()
-						.focused($nameIsFocused)
-						.textInputAutocapitalization(.words)
-						.textFieldLimiter(text: $name, limit: 32)
-					
-					ColorPickerView(selectedColor: $selectedColor)
-					
-					Picker("Default unit", selection: $selectedDefaultUnit) {
-						ForEach(UnitType.allCases, id: \.self) { unit in
-							Text(unit.rawValue.lowercased()).tag(unit)
-						}
-					}
-					.tint(.accent)
-					
+				switch fromRecipeScreen {
+				case true: ingredientFromRecipeScreenForm
+				case false: ingredientForm
 				}
-				
-				Section {
-					TextField("Notes", text: $notes, axis: .vertical)
-						.keyboardType(.default)
-						.textInputAutocapitalization(.sentences)
-				}
-				
 			}
 			.navigationTitle("New Ingredient")
 			.toolbarTitleDisplayMode(.inline)
@@ -107,7 +93,7 @@ extension IngredientsAdd {
 	func saveNewIngredient() {
 		let ingredient = Ingredient(
 			name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-			notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
+			notes: fromRecipeScreen ? "" : notes.trimmingCharacters(in: .whitespacesAndNewlines),
 			color: Color.convertColorToString(selectedColor),
 			defaultUnit: selectedDefaultUnit
 		)
@@ -117,10 +103,99 @@ extension IngredientsAdd {
 		do {
 			try? modelContext.save()
 		}
-
-		completion(ingredient)
+		
+		if fromRecipeScreen {
+			let recipeIngredient = RecipeIngredient(
+				name: ingredient.name,
+				notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
+				color: ingredient.color,
+				unit: ingredient.defaultUnit,
+				amount: unitValue,
+				sourceIngredientID: ingredient.id
+			)
+			
+			completion (recipeIngredient)
+		}
+		
 		isPresented.toggle()
 		settingsStore.triggerHaptic(&hapticSaved)
 		AnalyticsUtils.logButtonTap(screen: .ingredientAdd, button: .save)
+	}
+}
+
+// MARK: - views
+extension IngredientsAdd {
+	
+	@ViewBuilder
+	private var ingredientForm: some View {
+		Section {
+			
+			TextField("Name", text: $name)
+				.keyboardType(.default)
+				.bold()
+				.focused($nameIsFocused)
+				.textInputAutocapitalization(.words)
+				.textFieldLimiter(text: $name, limit: 32)
+			
+			TextField("Notes", text: $notes, axis: .vertical)
+				.keyboardType(.default)
+				.textInputAutocapitalization(.sentences)
+			
+			ColorPickerView(selectedColor: $selectedColor)
+			
+		}
+		
+		Section {
+			
+			Picker("Unit", selection: $selectedDefaultUnit) {
+				ForEach(UnitType.allCases, id: \.self) { unit in
+					Text(unit.rawValue.lowercased()).tag(unit)
+				}
+			}
+			.tint(.accent)
+			
+		}
+		
+	}
+	
+	@ViewBuilder
+	private var ingredientFromRecipeScreenForm: some View {
+		Section {
+			
+			TextField("Name", text: $name)
+				.keyboardType(.default)
+				.bold()
+				.focused($nameIsFocused)
+				.textInputAutocapitalization(.words)
+				.textFieldLimiter(text: $name, limit: 32)
+			
+			TextField("Notes", text: $notes, axis: .vertical)
+				.keyboardType(.default)
+				.textInputAutocapitalization(.sentences)
+			
+			ColorPickerView(selectedColor: $selectedColor)
+			
+		}
+		
+		Section {
+			
+			Picker("Unit", selection: $selectedDefaultUnit) {
+				ForEach(UnitType.allCases, id: \.self) { unit in
+					Text(unit.rawValue.lowercased()).tag(unit)
+				}
+			}
+			.tint(.accent)
+			.onChange(of: selectedDefaultUnit) { _,_ in
+				withAnimation {
+					unitValue = selectedDefaultUnit.defaultValue
+				}
+			}
+			
+			TextField("unit value", value: $unitValue, formatter: decimalFormatter)
+				.keyboardType(.decimalPad)
+				.multilineTextAlignment(.trailing)
+			
+		}
+		
 	}
 }

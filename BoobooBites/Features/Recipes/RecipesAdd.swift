@@ -121,12 +121,16 @@ struct RecipesAdd: View {
 					
 				}
 				
-				Section {
-					
-					if ingredients.count > 0 {
-						ForEach(ingredients.indices.sorted { ingredients[$0].name < ingredients[$1].name }, id: \.self ) { index in
+				if ingredients.count == 0 {
+					Section {} header: { ingredientsSectionHeaderView }
+				}
+				
+				if ingredients.count > 0 {
+					ForEach(ingredients.indices.sorted { ingredients[$0].name < ingredients[$1].name }, id: \.self ) { index in
+						Section {
 							
 							LabeledContent {
+								
 								Picker("Unit", selection: $ingredients[index].unit) {
 									ForEach(UnitType.allCases, id: \.self) { unit in
 										Text(unit.rawValue.lowercased()).tag(unit)
@@ -134,7 +138,9 @@ struct RecipesAdd: View {
 								}
 								.tint(.accent)
 								.labelsHidden()
+								
 							} label: {
+								
 								HStack {
 									Image(systemName: "circle")
 										.symbolVariant(.fill)
@@ -142,9 +148,8 @@ struct RecipesAdd: View {
 										.foregroundStyle(Color.convertStringToColor(ingredients[index].color).gradient)
 									Text(ingredients[index].name)
 								}
+								
 							}
-							.listRowSeparator(.hidden)
-							.listRowSpacing(0)
 							.swipeActions(edge: .trailing, allowsFullSwipe: false) {
 								Button(role: .destructive) {
 									withAnimation {
@@ -156,54 +161,19 @@ struct RecipesAdd: View {
 							TextField("unit value", value: $ingredients[index].amount, formatter: decimalFormatter)
 								.keyboardType(.decimalPad)
 								.multilineTextAlignment(.trailing)
-								.padding(12)
-								.glassEffectStyle()
-								.listRowInsets(.init(top: 0, leading: 9, bottom: 9, trailing: 9))
-								.listRowSeparator(ingredients[index].id == ingredients.sorted { $0.name < $1.name }.last?.id ? .hidden : .visible)
 							
-						}
-					}
-
-				} header: {
-					HStack {
-						
-						Text("Ingredients")
-						
-						Spacer()
-						
-						if availableIngredients.isEmpty {
-							
-							Button {
-								createNewIngredient()
-							} label: {
-								Image(systemName: "plus")
+							DisclosureGroup("Notes") {
+								TextField("add notes", text: $ingredients[index].notes, axis: .vertical)
+									.keyboardType(.default)
+									.textInputAutocapitalization(.sentences)
 							}
 							
-						} else {
-							
-							Menu {
-								
-								Button {
-									addStoredIngredient.toggle()
-								} label: {
-									Label("Stored Ingredients (\(availableIngredients.count))", systemImage: "carrot")
-								}
-								.disabled(availableIngredients.isEmpty)
-								
-								Divider()
-								
-								Button {
-									createNewIngredient()
-								} label: {
-									Label("Create New", systemImage: "plus")
-								}
-								
-							} label: {
-								Image(systemName: "plus")
+						} header: {
+							if ingredients[index].id == ingredients.sorted(by: { $0.name < $1.name }).first?.id {
+								ingredientsSectionHeaderView
 							}
-							
 						}
-						
+						.listSectionSpacing(.compact)
 					}
 				}
 				
@@ -224,8 +194,10 @@ struct RecipesAdd: View {
 			.toolbarTitleDisplayMode(.inline)
 			.scrollDismissesKeyboard(.interactively)
 			.sheet(isPresented: $newIngredient) {
-				IngredientsAdd(isPresented: $newIngredient) { ingredient in
-					addNewIngredient(ingredient)
+				IngredientsAdd(isPresented: $newIngredient, fromRecipeScreen: true) { recipeIngredient in
+					withAnimation {
+						ingredients.append(recipeIngredient)
+					}
 				}
 			}
 			.sheet(isPresented: $addStoredIngredient) {
@@ -284,16 +256,16 @@ extension RecipesAdd {
 		}
 	}
 	
-	private func addNewIngredient(_ ingredient: Ingredient) {
-		withAnimation {
-			ingredients.append(RecipeIngredient(name: ingredient.name, color: ingredient.color, unit: ingredient.defaultUnit, amount: ingredient.defaultUnit.defaultValue, sourceIngredientID: ingredient.id))
-		}
-	}
-	
 	private func addPickedIngredients(_ pickedIngredients: [Ingredient]) {
 		pickedIngredients.forEach { ingredient in
 			withAnimation {
-				ingredients.append(RecipeIngredient(name: ingredient.name, color: ingredient.color, unit: ingredient.defaultUnit, amount: ingredient.defaultUnit.defaultValue, sourceIngredientID: ingredient.id))
+				ingredients.append(RecipeIngredient(
+					name: ingredient.name,
+					color: ingredient.color,
+					unit: ingredient.defaultUnit,
+					amount: ingredient.defaultUnit.defaultValue,
+					sourceIngredientID: ingredient.id)
+				)
 			}
 		}
 	}
@@ -327,6 +299,55 @@ extension RecipesAdd {
 		isPresented.toggle()
 		settingsStore.triggerHaptic(&hapticSaved)
 		AnalyticsUtils.logButtonTap(screen: .recipeAdd, button: .save)
+		ReviewStore.requestReview()
 	}
 	
+}
+
+// MARK: - views
+extension RecipesAdd {
+	
+	@ViewBuilder
+	private var ingredientsSectionHeaderView: some View {
+		HStack {
+			
+			Text("Ingredients")
+			
+			Spacer()
+			
+			if availableIngredients.isEmpty {
+				
+				Button {
+					createNewIngredient()
+				} label: {
+					Image(systemName: "plus")
+				}
+				
+			} else {
+				
+				Menu {
+					
+					Button {
+						addStoredIngredient.toggle()
+					} label: {
+						Label("Stored Ingredients (\(availableIngredients.count))", systemImage: "carrot")
+					}
+					.disabled(availableIngredients.isEmpty)
+					
+					Divider()
+					
+					Button {
+						createNewIngredient()
+					} label: {
+						Label("Create New", systemImage: "plus")
+					}
+					
+				} label: {
+					Image(systemName: "plus")
+				}
+				
+			}
+			
+		}
+	}
 }

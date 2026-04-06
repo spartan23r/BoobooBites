@@ -117,6 +117,7 @@ extension MealPlannerAdd {
 			isPresented.toggle()
 			settingsStore.triggerHaptic(&hapticSaved)
 			AnalyticsUtils.logButtonTap(screen: .mealPlanAdd, button: .save)
+			ReviewStore.requestReview()
 		}
 	}
 	

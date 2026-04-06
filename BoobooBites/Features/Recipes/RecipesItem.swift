@@ -340,8 +340,11 @@ struct RecipesItem: View {
 			.toastMessage(isActive: $toastCopiedInstructions, color: .appleBlue, title: "Instructions Copied", image: "document.on.clipboard")
 			.scrollDismissesKeyboard(.interactively)
 			.sheet(isPresented: $newIngredient) {
-				IngredientsAdd(isPresented: $newIngredient) { ingredient in
-					addNewIngredient(ingredient)
+				IngredientsAdd(isPresented: $newIngredient, fromRecipeScreen: true) { recipeIngredient in
+					withAnimation {
+						recipe.ingredients.append(recipeIngredient)
+					}
+					saveLastUpdatedDate()
 				}
 			}
 			.sheet(isPresented: $addStoredIngredient) {
@@ -565,18 +568,15 @@ struct RecipesItem: View {
 								.textInputAutocapitalization(.words)
 								.textFieldLimiter(text: $editIngredientNameValue, limit: 32)
 							
+							TextField("Notes", text: $editIngredientNotesValue, axis: .vertical)
+								.keyboardType(.default)
+								.textInputAutocapitalization(.sentences)
+							
 							ColorPickerView(selectedColor: $selectedColor)
 							
 						}
 						
 						Section {
-							
-							
-							TextField("unit value", value: $editIngredientUnitValue, formatter: decimalFormatter)
-								.keyboardType(.decimalPad)
-								.multilineTextAlignment(.trailing)
-								.padding(12)
-								.glassEffectStyle()
 							
 							Picker("Unit", selection: $editIngredientUnit) {
 								ForEach(UnitType.allCases, id: \.self) { unit in
@@ -585,7 +585,10 @@ struct RecipesItem: View {
 							}
 							.frame(maxWidth: .infinity, alignment: .trailing)
 							.tint(.accent)
-							.labelsHidden()
+							
+							TextField("unit value", value: $editIngredientUnitValue, formatter: decimalFormatter)
+								.keyboardType(.decimalPad)
+								.multilineTextAlignment(.trailing)
 							
 //							LabeledContent {
 //								Picker("Unit", selection: $editIngredientUnit) {
@@ -602,14 +605,6 @@ struct RecipesItem: View {
 //									.padding(9)
 //									.glassEffectStyle()
 //							}
-							
-						}
-						
-						Section {
-							
-							TextField("Notes", text: $editIngredientNotesValue, axis: .vertical)
-								.keyboardType(.default)
-								.textInputAutocapitalization(.sentences)
 							
 						}
 						
@@ -751,17 +746,16 @@ extension RecipesItem {
 		}
 	}
 	
-	private func addNewIngredient(_ ingredient: Ingredient) {
-		withAnimation {
-			recipe.ingredients.append(RecipeIngredient(name: ingredient.name, color: ingredient.color, unit: ingredient.defaultUnit, amount: ingredient.defaultUnit.defaultValue, sourceIngredientID: ingredient.id))
-		}
-		saveLastUpdatedDate()
-	}
-	
 	private func addPickedIngredients(_ pickedIngredients: [Ingredient]) {
 		pickedIngredients.forEach { ingredient in
 			withAnimation {
-				recipe.ingredients.append(RecipeIngredient(name: ingredient.name, color: ingredient.color, unit: ingredient.defaultUnit, amount: ingredient.defaultUnit.defaultValue, sourceIngredientID: ingredient.id))
+				recipe.ingredients.append(RecipeIngredient(
+					name: ingredient.name,
+					color: ingredient.color,
+					unit: ingredient.defaultUnit,
+					amount: ingredient.defaultUnit.defaultValue,
+					sourceIngredientID: ingredient.id)
+				)
 			}
 		}
 		saveLastUpdatedDate()
